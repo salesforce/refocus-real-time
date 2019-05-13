@@ -1,0 +1,32 @@
+{
+  "name": "refocus-real-time",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://git.soma.salesforce.com/igoldstein/refocus-real-time.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.4",
+    "debug": "^4.1.1",
+    "express": "^4.16.4",
+    "feature-toggles": "^1.4.0",
+    "http": "0.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "redis": "^2.8.0",
+    "socket.io": "^2.2.0",
+    "superagent": "^5.0.2"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^6.1.4",
+    "nock": "^10.0.6"
+  }
+}
