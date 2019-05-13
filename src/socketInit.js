@@ -11,7 +11,7 @@ module.exports = (io) => {
     Promise.resolve()
     .then(() => {
       const ipAddress = ipWhitelistUtils.getIpAddressFromSocket(socket);
-      return ipWhitelistUtils.isWhitelisted(ipAddress)
+      return ipWhitelistUtils.isWhitelisted(ipAddress);
     })
     .then((allowed) => {
       if (!allowed) {
