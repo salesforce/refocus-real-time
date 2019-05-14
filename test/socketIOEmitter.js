@@ -7,7 +7,7 @@
  */
 
 /**
- * tests/realtime/socketIOEmitter.js
+ * test/socketIOEmitter.js
  */
 'use strict'; // eslint-disable-line strict
 const chai = require('chai');

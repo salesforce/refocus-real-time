@@ -7,7 +7,7 @@
  */
 
 /**
- * tests/realtime/emitUtil.js
+ * test/emitUtil.js
  */
 'use strict'; // eslint-disable-line strict
 const chai = require('chai');
