@@ -426,6 +426,9 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
         });
       });
 
+      const x = true; // event expected
+      const _ = false; // event not expected
+
       describe('subjectUpdate', () => {
         describe('absolutePath', () => {
           it('root:', function () {
