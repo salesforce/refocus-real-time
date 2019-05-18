@@ -1,4 +1,10 @@
 const debug = require('debug')('refocus-real-time:emitter');
+const jwt = require('jsonwebtoken');
+const Promise = require('bluebird');
+const conf = require('../conf/config');
+const jwtVerifyAsync = Promise.promisify(jwt.verify);
+const request = require('superagent');
+
 const filters = [
   'aspectFilter',
   'subjectTagFilter',
@@ -118,6 +124,7 @@ function perspectiveEmit(nspComponents, obj) {
     applyFilter(statusFilter, obj.status);
 } // perspectiveEmit
 
+// OLD - remove along with namespace toggles
 /**
  * Returns true if this object should be emitted as a real-time event to a
  * namespace (representing a room) given the various filters passed in here
@@ -160,6 +167,7 @@ function shouldIEmitThisObj(nspString, obj, pubOpts) {
     return perspectiveEmit(nspComponents, obj);
   }
 
+  // OLD - remove along with namespace toggles
   if (absPathNsp === botAbsolutePath) {
     return botEmit(nspComponents, obj, pubOpts);
   }
@@ -167,6 +175,7 @@ function shouldIEmitThisObj(nspString, obj, pubOpts) {
   return false;
 }
 
+// OLD - remove along with namespace toggles
 /**
  * When passed a perspective object, it returns a namespace string based on the
  * fields set in the prespective object. A namespace string is of the format
@@ -196,6 +205,7 @@ function getPerspectiveNamespaceString(inst) {
   return namespace;
 }
 
+// OLD - remove along with namespace toggles
 /**
  * When passed a room object, it returns a namespace string based on the
  * fields set in the room object.
@@ -211,31 +221,168 @@ function getBotsNamespaceString(inst) {
   return namespace;
 }
 
+// OLD - remove along with namespace toggles
 /**
  * Initializes a socketIO namespace based on the perspective object.
  * @param {Instance} inst - The perspective instance.
  * @param {Socket.io} io - The socketio's server side object
- * @returns {Set} - The socketio server side object with the namespaces
- * initialized
  */
 function initializePerspectiveNamespace(inst, io) {
   const nspString = getPerspectiveNamespaceString(inst);
-  io.of(nspString);
-  return io;
+  io.of(nspString).on('connect', (socket) =>
+    Promise.join(
+      validateIp(socket),
+      validateTokenOldFormat(socket),
+    )
+    .catch((err) => {
+      console.error('socket connect failed:', err)
+      socket.disconnect();
+    })
+  );
 }
 
+// OLD - remove along with namespace toggles
 /**
  * Initializes a socketIO namespace based on the bot object.
  * @param {Instance} inst - The perspective instance.
  * @param {Socket.io} io - The socketio's server side object
- * @returns {Set} - The socketio server side object with the namespaces
- * initialized
  */
 function initializeBotNamespace(inst, io) {
   const nspString = getBotsNamespaceString(inst);
-  io.of(nspString);
-  return io;
+  io.of(nspString).on('connect', (socket) =>
+    Promise.join(
+      validateIp(socket),
+      validateTokenOldFormat(socket),
+    )
+    .catch((err) => {
+      console.error('socket connect failed:', err)
+      socket.disconnect();
+    })
+  );
 }
+
+// NEW
+/**
+ * Initialize a socketIO namespace with a connect event that validates the
+ * connection and assigns to the appropriate room.
+ * @param {String} namespace - The namespace to initialize
+ * @param {Socket.io} io - The socketio's server side object
+ */
+function initializeNamespace(namespace, io) {
+  trackedRooms[namespace] = new Set();
+  io.of(namespace).on('connect', (socket) =>
+    Promise.join(
+      validateIp(socket),
+      validateTokenNewFormat(socket),
+    )
+    .then(() => {
+      addToRoom(socket);
+      trackConnectedRooms(socket);
+      socket.emit('authenticated');
+    })
+    .catch((err) => {
+      console.error('socket connect failed:', err)
+      socket.disconnect();
+    })
+  );
+}
+
+// NEW
+/**
+ * Add the socket to the appropriate room.
+ * @param {Socket} socket - The socket connection
+ */
+function addToRoom(socket) {
+  const roomName = socket.handshake.query.id;
+  socket.join(roomName);
+}
+
+// NEW
+/**
+ * Keep track of which rooms are active for the namespace
+ * @param {Socket} socket - The socket connection
+ */
+const trackedRooms = {};
+function trackConnectedRooms(socket) {
+  const nsp = socket.nsp;
+  const roomName = socket.handshake.query.id;
+  trackedRooms[nsp.name].add(roomName);
+
+  socket.on('disconnect', () => {
+    const allSockets = Object.values(nsp.connected);
+    const roomIsActive = allSockets.some((socket) =>
+      Object.keys(socket.rooms).includes(roomName)
+    );
+
+    if (!roomIsActive) {
+      trackedRooms[nsp.name].delete(roomName);
+    }
+  });
+}
+
+// OLD
+function validateTokenOldFormat(socket) {
+  const token = socket.handshake.query && socket.handshake.query.t;
+  if (!token) {
+    throw new Error('Access denied: no token provided');
+  }
+
+  return jwtVerifyAsync(socket.handshake.query.t, conf.secret)
+}
+
+// NEW
+function validateTokenNewFormat(socket) {
+  return new Promise((resolve) => socket.once('auth', resolve))
+  .then((token) =>
+    jwtVerifyAsync(token, conf.secret)
+  )
+  .timeout(conf.authTimeout);
+}
+
+/**
+ * Verify that the socket is connecting from a whitelisted IP address.
+ *
+ * @param {Socket} socket - the socket connection
+ * @returns {Promise} resolves if the ip is valid
+ * @throws {Error} if the ip address is not whitelisted or can not be identified
+ */
+function validateIp(socket) {
+  if (conf.ipWhitelistService) {
+    const ipAddress = getIpAddressFromSocket(socket);
+    if (!ipAddress) {
+      throw new Error('could not identify ip address');
+    }
+
+    return request.get(`${conf.ipWhitelistService}/${conf.ipWhitelistPath}/${ipAddress}`)
+    .then((res) => {
+      if (!res.body.allow) {
+        throw new Error('Access denied: ip not allowed', ipAddress);
+      }
+    })
+  }
+}
+
+/**
+ * Determines the ip address origin of the socket connection based on either
+ * the socket handshake's "x-forwarded-for" header or the socket handshake's
+ * address, and returns the ip address to the caller.
+ *
+ * @param {Socket} socket - the socket connection
+ * @returns {*} a string representing the ip address
+ */
+function getIpAddressFromSocket(socket) {
+  if (socket && socket.handshake) {
+    // From socket handshake's "x-forwarded-for" header?
+    if (socket.handshake.headers && socket.handshake.headers['x-forwarded-for']) {
+      return socket.handshake.headers['x-forwarded-for'];
+    }
+
+    // From socket handshake's address?
+    if (socket.handshake.address) {
+      return socket.handshake.address;
+    }
+  }
+}; // getIpAddressFromSocket
 
 function getNewObjAsString(key, obj) {
   const wrappedObj = {};
@@ -255,6 +402,25 @@ function getNewObjAsString(key, obj) {
   }
 
   return JSON.stringify(wrappedObj);
+}
+
+// NEW
+/**
+ * Emit to all specified rooms.
+ * @param {Socket.io} io - socket.io server
+ * @param {String}  nsp - the namespace to emit to
+ * @param {Array}  rooms - list of rooms to emit to
+ * @param {String}  key - event type
+ * @param {Object}  obj - event body
+ */
+function emitToRooms(io, nsp, rooms, key, obj) {
+  const namespace = io.of(nsp);
+  if (rooms && rooms.length) {
+    rooms.forEach((room) =>
+      namespace.to(room)
+    );
+    namespace.emit(key, obj);
+  }
 }
 
 /**
@@ -279,12 +445,14 @@ function parseObject(messgObj, key) {
 }
 
 module.exports = {
-  applyFilter, // for testing only
   getBotsNamespaceString,
   getNewObjAsString,
   getPerspectiveNamespaceString,
   initializeBotNamespace,
   initializePerspectiveNamespace,
+  initializeNamespace,
+  trackedRooms,
   shouldIEmitThisObj,
+  emitToRooms,
   parseObject,
 }; // exports

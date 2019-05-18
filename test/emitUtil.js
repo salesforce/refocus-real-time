@@ -17,6 +17,7 @@ chai.should();
 const Promise = require('bluebird');
 const sinon = require('sinon');
 const sioClient = require('socket.io-client');
+const featureToggles = require('feature-toggles');
 const emitter = require('../src/emitter');
 const u = require('../util/emitUtils');
 
@@ -26,6 +27,18 @@ const roomUpdate = 'refocus.internal.realtime.room.settingsChanged';
 const botActionUpdate = 'refocus.internal.realtime.bot.action.update';
 const botDataUpdate = 'refocus.internal.realtime.bot.data.update';
 const botEventUpdate = 'refocus.internal.realtime.bot.event.update';
+
+const perspectiveTestFuncMap = {
+  testSampleUpdate: sampleUpdate,
+  testSubjectUpdate: subjectUpdate,
+};
+
+const botRoomTestFuncMap = {
+  testBotActionUpdate: botActionUpdate,
+  testBotDataUpdate: botDataUpdate,
+  testBotEventUpdate: botEventUpdate,
+  testRoomUpdate: roomUpdate,
+};
 
 module.exports = {
   buildFilters(filters) {
@@ -47,50 +60,33 @@ module.exports = {
     return base;
   },
 
-  textToBotAction(text) {
-    const name = 'botAction1';
-    const regex = /^(\S+?),\s*(\S+?)$/;
-    const result = regex.exec(text);
-    const [match, bot, room] = result;
-    return {
-      name,
-      bot,
-      room,
-    };
-  },
+  textToBotAction: (text) => module.exports.textToBot('botAction', text),
+  textToBotEvent: (text) => module.exports.textToBot('botEvent', text),
+  textToBotData: (text) => module.exports.textToBot('botData', text),
 
-  textToBotData(text) {
-    const name = 'botData1';
-    const regex = /^(\S+?),\s*(\S+?)$/;
+  textToBot(name, text) {
+    const regex = /^\w+(\d),\s*\w+(\d)$/;
     const result = regex.exec(text);
-    const [match, bot, room] = result;
+    const [match, botId, roomId] = result;
     return {
       name,
-      bot,
-      room,
-    };
-  },
-
-  textToBotEvent(text) {
-    const name = 'botEvent1';
-    const regex = /^(\S+?),\s*(\S+?)$/;
-    const result = regex.exec(text);
-    const [match, bot, room] = result;
-    return {
-      name,
-      bot,
-      room,
+      botId,
+      roomId,
     };
   },
 
   textToRoom(text) {
-    const regex = /^(\S+?),\s*\[(.*?)\]$/;
+    const regex = /^\w+(\d),\s*\[(.*?)\]$/;
     const result = regex.exec(text);
-    const [match, name, botsStr] = result;
-    const bots = botsStr.replace(/\s/g, '').split(',') || [];
+    const [match, id, botsStr] = result;
+    const botStrings = botsStr.replace(/\s/g, '').split(',') || [];
+    const bots = botStrings.map((botStr) => ({ id: botStr.match(/^\w+(\d)$/)[1] }));
+
     return {
-      name,
-      bots,
+      id,
+      type: {
+        bots,
+      },
     };
   },
 
@@ -155,48 +151,42 @@ module.exports = {
   sampleToText(samp) {
     const stags = tagsToText(samp.subject.tags);
     const atags = tagsToText(samp.aspect.tags);
-    return `${samp.name}: ${stags} ${atags} - ${samp.status}`;
+    return `${samp.name}${stags || atags ? `:${stags}${atags}` : ''} - ${samp.status}`;
 
     function tagsToText(tags) {
-      return tags.length ? `[${tags.reduce((a, b) => `${a}, ${b}`)}]` : '';
+      return tags.length ? ` [${tags.reduce((a, b) => `${a}, ${b}`)}]` : '';
     }
   },
 
-  bindEmitAndExpect(sioServer, clients, eventType) {
-    return ({ eventBody, clientExpectations }) => emitAndExpect({
-      sioServer,
-      clients,
-      eventType,
-      eventBody,
-      clientExpectations,
-    });
+  setupTestFuncs({ sioServer, perspectiveClients, botClients, roomClients, expectOverrides }) {
+    Object.assign(
+      this,
+      bindTestFuncs(
+        { sioServer, perspectiveClients },
+        emitAndExpectPerspectives,
+        perspectiveTestFuncMap,
+      ),
+      bindTestFuncs(
+        { sioServer, botClients, roomClients, expectOverrides },
+        emitAndExpectBotsRooms,
+        botRoomTestFuncMap,
+      ),
+    );
   },
 
-  bindEmitAndExpectBots(sioServer, botClients, roomClients, eventType) {
-    return ({ eventBody, botExpectations, roomExpectations }) => emitAndExpectBots({
-      sioServer,
-      botClients,
-      roomClients,
-      eventType,
-      eventBody,
-      botExpectations,
-      roomExpectations,
-    });
-  },
-
-  bindEmitAndExpectByClient(sioServer, eventType, eventExpectations, clients) {
+  bindEmitAndExpectByClient({ sioServer, eventExpectations, clients }) {
     return (clientExpectations) => emitAndExpectByClient({
       sioServer,
-      eventType,
+      eventType: sampleUpdate,
       eventExpectations,
       clientExpectations: clients.map((client, i) => [clientExpectations[i], client]),
     });
   },
 
-  bindEmitAndStubFilterCheck(sioServer, eventType, nspString) {
+  bindEmitAndStubFilterCheck({ sioServer, eventType, eventBody, nspString }) {
     return (expected) => emitAndStubFilterCheck({
       sioServer,
-      eventType,
+      eventType: sampleUpdate,
       eventBody,
       nspString,
       expected,
@@ -205,126 +195,145 @@ module.exports = {
 
   bindOpenCloseByClient(clients) {
     return (clientOpenClose) => openCloseByClient({
-      sioServer,
       clientOpenClose: clients.map((client, i) => [clientOpenClose[i], client]),
     });
   },
 
-  emitAndExpectByClient,
+  connectPerspectivesOldFormat(sioServer, clientFilters, token) {
+    const namespaceFunc = u.getPerspectiveNamespaceString;
+    return connectClientsOldFormat(sioServer, namespaceFunc, clientFilters, token);
+  },
 
-  connectClientsNewFormat(sioServer, clientFilters, token) {
-    const namespace = sioServer.of('perspectives');
-    const awaitConnections = awaitMultiple(namespace, 'connection', Object.keys(clientFilters).length);
+  connectPerspectivesNewFormat(sioServer, clientFilters, token) {
+    const idFunc = u.getPerspectiveNamespaceString;
+    return connectClientsNewFormat(sioServer, '/perspectives', idFunc, clientFilters, token);
+  },
+
+  connectBotsOldFormat(sioServer, clientFilters, token) {
+    const namespaceFunc = u.getBotsNamespaceString;
+    return connectClientsOldFormat(sioServer, namespaceFunc, clientFilters, token);
+  },
+
+  connectBotsNewFormat(sioServer, clientFilters, token) {
+    const idFunc = b => b.id;
+    return connectClientsNewFormat(sioServer, '/bots', idFunc, clientFilters, token);
+  },
+
+  connectRoomsOldFormat(sioServer, clientFilters, token) {
+    const namespaceFunc = u.getBotsNamespaceString;
+    return connectClientsOldFormat(sioServer, namespaceFunc, clientFilters, token);
+  },
+
+  connectRoomsNewFormat(sioServer, clientFilters, token) {
+    const idFunc = r => r.id;
+    return connectClientsNewFormat(sioServer, '/rooms', idFunc, clientFilters, token);
+  },
+
+  connectPerspectiveNewFormat(filters, token, opts) {
+    const idFunc = u.getPerspectiveNamespaceString;
+    return connectNewFormat('/perspectives', idFunc, filters, token, opts);
+  },
+
+  closeClients(clientMap) {
+    Object.values(clientMap).forEach((clients) =>
+      clients.forEach((client) =>
+        client.close()
+      )
+    );
+  },
+
+  mergeClients(clients1, clients2) {
     const clients = {};
-    Object.entries(clientFilters).map(([name, filters]) => {
-      if (!clients[name]) clients[name] = [];
-      clients[name].push(connectClientNewFormat(filters, token));
+    [...Object.keys(clients1), ...Object.keys(clients2)].forEach((filterName) => {
+      clients[filterName] = [...clients1[filterName], ...clients2[filterName]];
     });
-    return awaitConnections.then(() => clients);
+    return clients;
   },
 
-  connectClientsOldFormat(sioServer, clientFilters, token) {
-    const clients = {};
-    return Promise.map(Object.entries(clientFilters), ([name, filters]) => {
-      const namespace = u.getPerspectiveNamespaceString(filters);
-      const awaitConnection = awaitEvent(sioServer.of(namespace), 'connection');
-      if (!clients[name]) clients[name] = [];
-      clients[name].push(this.connectClientOldFormat(filters, token));
-      return awaitConnection;
-    })
-    .then(() => clients);
-  },
-
-  connectBotClientsOldFormat(sioServer, clientFilters, token) {
-    const clients = {};
-    return Promise.map(Object.entries(clientFilters), ([name, filters]) => {
-      const namespace = u.getBotsNamespaceString(filters);
-      const awaitConnection = awaitEvent(sioServer.of(namespace), 'connection');
-      if (!clients[name]) clients[name] = [];
-      clients[name].push(this.connectBotClientOldFormat(filters, token));
-      return awaitConnection;
-    })
-    .then(() => clients);
-  },
-
-  connectRoomClientsOldFormat(sioServer, clientFilters, token) {
-    const clients = {};
-    return Promise.map(Object.entries(clientFilters), ([name, filters]) => {
-      const namespace = u.getBotsNamespaceString(filters);
-      const awaitConnection = awaitEvent(sioServer.of(namespace), 'connection');
-      if (!clients[name]) clients[name] = [];
-      clients[name].push(this.connectBotClientOldFormat(filters, token));
-      return awaitConnection;
-    })
-    .then(() => clients);
-  },
-
-  connectClientNewFormat(filters, token, opts) {
-    const options = {
-      query: {
-        id: u.getPerspectiveNamespaceString(filters),
-      },
-      transports: ['websocket'],
-      extraHeaders: {
-        authorization: token,
-      },
-      ...opts,
-    };
-
-    return sioClient('http://localhost:3000/perspectives', options);
-  },
-
-  connectClientOldFormat(filters, token) {
-    const namespace = u.getPerspectiveNamespaceString(filters);
-    const options = {
-      transports: ['websocket'],
-      query: {
-        t: token,
-      },
-    };
-
-    return sioClient(`http://localhost:3000${namespace}`, options);
-  },
-
-  connectBotClientOldFormat(filters, token) {
-    const namespace = u.getBotsNamespaceString(filters);
-    const options = {
-      transports: ['websocket'],
-      query: {
-        t: token,
-      },
-    };
-
-    return sioClient(`http://localhost:3000${namespace}`, options);
-  },
+  toggleOverride(key, value) {
+    featureToggles._toggles[key] = value;
+  }, // toggleOverride
 };
 
-function openCloseByClient({ sioServer, clientOpenClose }) {
-  Object.entries(clientOpenClose).forEach(([openClose, client]) => {
+function openCloseByClient({ clientOpenClose }) {
+  return Promise.all(clientOpenClose.map(([openClose, client]) => {
     if (openClose === true) {
+      const awaitConnect = awaitEvent(client, 'authenticated');
       client.open();
+      return awaitConnect;
     } else if (openClose === false) {
+      const awaitDisconnect = awaitEvent(client, 'disconnect');
       client.close();
+      return awaitDisconnect.then(() => new Promise((resolve) => setTimeout(resolve, 50)));
     }
+  }));
+}
+
+function connectClientsOldFormat(sioServer, namespaceFunc, clientFilters, token) {
+  const clients = {};
+  return Promise.map(Object.entries(clientFilters), ([name, filters]) => {
+    const namespace = namespaceFunc(filters);
+    const awaitConnection = awaitEvent(sioServer.of(namespace), 'connection');
+    if (!clients[name]) clients[name] = [];
+    clients[name].push(connectOldFormat(namespace, token));
+    return awaitConnection;
+  })
+  .then(() => clients);
+}
+
+function connectClientsNewFormat(sioServer, nsp, idFunc, clientFilters, token) {
+  const namespace = sioServer.of(nsp);
+  const clientCount = Object.keys(clientFilters).length;
+  const awaitConnections = awaitMultiple(namespace, 'connection', clientCount);
+  const clients = {};
+  Object.entries(clientFilters).map(([name, filters]) => {
+    if (!clients[name]) clients[name] = [];
+    clients[name].push(connectNewFormat(nsp, idFunc, filters, token));
+  });
+  return awaitConnections.then(() => clients);
+}
+
+function connectOldFormat(namespace, token) {
+  const options = {
+    transports: ['websocket'],
+    query: {
+      t: token,
+    },
+  };
+
+  return sioClient(`http://localhost:3000${namespace}`, options);
+}
+
+function connectNewFormat(namespace, idFunc, filters, token, opts) {
+  const options = {
+    query: {
+      id: idFunc(filters),
+    },
+    transports: ['websocket'],
+    ...opts,
+  };
+
+  return sioClient(`http://localhost:3000${namespace}`, options)
+  .on('connect', function() {
+    this.emit('auth', token);
   });
 }
 
 function emitAndExpectByClient({ sioServer, eventType, eventExpectations, clientExpectations }) {
-  const eventExpectationsNone = eventExpectations.map(([expected, samp]) => [_, samp]);
-  const trackedEventsByClient = {};
-  Object.values(clientExpectations).forEach((client) => {
-    trackedEventsByClient[client.name] = trackEvents(client, eventType);
-  });
-  Object.entries(eventExpectations).forEach(([expected, sampleText]) => {
-    emitter(sioServer, eventType, exports.textToSample(sampleText));
+  const eventExpectationsNone = eventExpectations.map(([expected, samp]) => [null, samp]);
+  const trackedEventsByClient = clientExpectations.map(([expectForClient, client]) =>
+    trackEvents(client, eventType)
+  );
+  eventExpectations.forEach(([expected, sampleText]) => {
+    emitter(sioServer, eventType, module.exports.textToSample(sampleText));
   });
   return new Promise((resolve) => setTimeout(resolve, 50))
   .then(() => {
-    Object.entries(clientExpectations).forEach(([expectForClient, client]) => {
-      client.removeAllListeners();
+    clientExpectations.forEach(([expectForClient, client], i) => {
+      client.removeAllListeners(eventType);
       const clientEventExpectations = expectForClient ? eventExpectations : eventExpectationsNone;
-      const trackedEvents = trackedEventsByClient[client.name];
-      Object.entries(clientEventExpectations).forEach(([expectEvent, sampleText]) => {
+      const trackedEvents = trackedEventsByClient[i];
+      clientEventExpectations.forEach(([expectEvent, sampleText]) => {
         if (expectEvent) {
           expect(trackedEvents[sampleText]).to.exist;
         } else {
@@ -341,25 +350,41 @@ function emitAndStubFilterCheck({ sioServer, eventType, eventBody, nspString, ex
   return new Promise((resolve) => setTimeout(resolve, 50))
   .then(() => {
     expect(spy.called).to.equal(expected);
+    u.shouldIEmitThisObj.restore();
   });
 }
 
 function trackEvents(target, eventType) {
   const trackedEvents = {};
-  return new Promise((resolve) => {
-    target.on(eventType, (eventBody) => {
-      const eventName = sampleToText(eventBody);
-      if (trackedEvents[eventName]) {
-        trackedEvents[eventName] = 0;
-      }
+  target.on(eventType, (eventBody) => {
+    eventBody = JSON.parse(eventBody);
+    const samp = eventBody[sampleUpdate].new;
+    const eventName = module.exports.sampleToText(samp);
+    if (!trackedEvents[eventName]) {
+      trackedEvents[eventName] = 0;
+    }
 
-      trackedEvents[eventName]++;
-    });
+    trackedEvents[eventName]++;
   });
+  return trackedEvents;
 }
 
-function emitAndExpect({ sioServer, clients, eventType, eventBody, clientExpectations }) {
-  const expecting = expectEvents(eventType, clientExpectations, clients);
+function bindTestFuncs(args1, funcToBind, testFuncs) {
+  const ret = {};
+  Object.entries(testFuncs).forEach(([name, eventType]) =>
+    ret[name] = (args2) => funcToBind({
+      ...args1,
+      ...args2,
+      eventType,
+    })
+  );
+  return ret;
+}
+
+function emitAndExpectPerspectives({
+    sioServer, perspectiveClients, eventType, eventBody, clientExpectations,
+}) {
+  const expecting = expectEvents(eventType, clientExpectations, perspectiveClients);
   emitter(sioServer, eventType, eventBody);
   return expecting;
 }
@@ -370,7 +395,11 @@ const filterIndex = {
   [botDataUpdate]: 2,
   [botEventUpdate]: 3,
 };
-function emitAndExpectBots({ sioServer, botClients, roomClients, eventType, eventBody, botExpectations, roomExpectations }) {
+
+function emitAndExpectBotsRooms({
+    sioServer, botClients, roomClients, eventType, eventBody,
+    botExpectations, roomExpectations, expectOverrides,
+}) {
   const pubOpts = {
     client: 'pubBot',
     channel: 'botChannelName',
@@ -378,37 +407,22 @@ function emitAndExpectBots({ sioServer, botClients, roomClients, eventType, even
     filterField: eventType === 'event' ? 'id' : 'name',
   };
   const expecting = Promise.join(
-    expectEvents(eventType, botExpectations, botClients),
-    expectEvents(eventType, roomExpectations, roomClients),
+    expectEvents(eventType, botExpectations, botClients, expectOverrides),
+    expectEvents(eventType, roomExpectations, roomClients, expectOverrides),
   );
   emitter(sioServer, eventType, eventBody, pubOpts);
   return expecting;
 }
 
-function expectEvents(eventType, clientExpectations, clients) {
-  return Promise.all(clientExpectations.map(([expected, filterName]) =>
-    Promise.all(clients[filterName].map((client, i) => {
+function expectEvents(eventType, clientExpectations, clients, expectOverrides=[]) {
+  return Promise.all(clientExpectations.map(([expected, filterName]) => {
+    return Promise.all(clients[filterName].map((client, i) => {
+      const override = expectOverrides[i];
+      const localExpected = override !== undefined ? override : expected;
       const clientName = `${filterName} (${i})`;
-      return expectEvent(eventType, expected, client, clientName);
+      return expectEvent(eventType, localExpected, client, clientName);
     }))
-  ));
-}
-
-function expectEventsBots(eventType, botExpectations, roomExpectations, clients) {
-  return Promise.join(
-    Promise.all(botExpectations.map(([expected, filterName]) =>
-      Promise.all(clients[filterName].map((client, i) => {
-        const clientName = `${filterName} (${i})`;
-        return expectEvent(eventType, expected, client, clientName);
-      }))
-    )),
-    Promise.all(roomExpectations.map(([expected, filterName]) =>
-      Promise.all(clients[filterName].map((client, i) => {
-        const clientName = `${filterName} (${i})`;
-        return expectEvent(eventType, expected, client, clientName);
-      }))
-    )),
-  );
+  }));
 }
 
 function expectEvent(eventType, expected, client, clientName) {

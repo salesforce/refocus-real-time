@@ -12,6 +12,7 @@
  * Configuration Settings
  */
 'use strict'; // eslint-disable-line strict
+const featureToggles = require('feature-toggles');
 const pe = process.env;
 
 const config = {
@@ -22,8 +23,10 @@ const config = {
   pubSubBots: pe.REDIS_PUBSUB_BOTS || '',
   pubSubPerspectives: pe.REDIS_PUBSUB_PERSPECTIVES || '',
   secret: pe.SECRET,
+  authTimeout: pe.TOKEN_AUTH_TIMEOUT || 5000,
   perspectiveChannel: 'focus',
   botChannel: 'imc',
+  ipWhitelistPath: 'v1/verify',
 };
 
 config.pubSubBots = config.pubSubBots && pe[config.pubSubBots] && [pe[config.pubSubBots]] || [];
@@ -34,4 +37,31 @@ config.pubSubPerspectives =
   .filter((r) => pe[r])
   .map((r) => pe[r]);
 
+const toggles = {
+  // use old socket.io namespace format
+  useOldNamespaceFormat: environmentVariableTrue(pe, 'USE_OLD_NAMESPACE_FORMAT'),
+
+  // use new socket.io namespace/room format
+  useNewNamespaceFormat: environmentVariableTrue(pe, 'USE_NEW_NAMESPACE_FORMAT'),
+}; // shortTermToggles
+
+featureToggles.load(toggles);
+
 module.exports = config;
+
+/**
+ * Return boolean true if the named environment variable is boolean true or
+ * case-insensitive string 'true'.
+ *
+ * @param {Object} processEnv - The node process environment. (Passing it into
+ *  this function instead of just getting a reference to it *inside* this
+ *  function makes the function easier to test.)
+ * @param {String} environmentVariableName - The name of the environment var.
+ * @returns {Boolean} true if the named environment variable is boolean true or
+ *  case-insensitive string 'true'.
+ */
+function environmentVariableTrue(processEnv, environmentVariableName) {
+  const x = processEnv[environmentVariableName];
+  return typeof x !== 'undefined' && x !== null &&
+    x.toString().toLowerCase() === 'true';
+} // environmentVariableTrue
