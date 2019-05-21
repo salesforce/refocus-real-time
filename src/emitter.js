@@ -1,6 +1,7 @@
 const debug = require('debug')('refocus-real-time:emitter');
 const toggle = require('feature-toggles');
 const u = require('../util/emitUtils');
+const eventTypeIndex = 3;
 const initEvent = {
   bot: 'refocus.internal.realtime.bot.namespace.initialize',
   perspective: 'refocus.internal.realtime.perspective.namespace.initialize',
@@ -12,22 +13,22 @@ module.exports = (io, key, obj, pubOpts) => {
 
   // NEW
   if (toggle.isFeatureEnabled('useNewNamespaceFormat')) {
-    const eventType = key.split('.')[3];
+    const eventType = key.split('.')[eventTypeIndex];
     if (eventType === 'subject' || eventType === 'sample') {
-      const perspRooms = Array.from(u.trackedRooms['/perspectives']).filter((roomName) =>
+      const perspectives = Array.from(u.connectedRooms['/perspectives']).filter((roomName) =>
         u.shouldIEmitThisObj(roomName, obj)
       );
-      u.emitToRooms(io, '/perspectives', perspRooms, key, newObjectAsString);
+      u.emitToClients(io, '/perspectives', perspectives, key, newObjectAsString);
     } else if (eventType === 'bot') {
-      const roomRooms = [obj.roomId];
-      const botRooms = [obj.botId];
-      u.emitToRooms(io, '/rooms', roomRooms, key, newObjectAsString);
-      u.emitToRooms(io, '/bots', botRooms, key, newObjectAsString);
+      const rooms = [obj.roomId];
+      const bots = [obj.botId];
+      u.emitToClients(io, '/rooms', rooms , key, newObjectAsString);
+      u.emitToClients(io, '/bots', bots  , key, newObjectAsString);
     } else if (eventType === 'room') {
-      const roomRooms = [obj.id];
-      const botRooms = obj.type && obj.type.bots && obj.type.bots.map(bot => bot.id);
-      u.emitToRooms(io, '/rooms', roomRooms, key, newObjectAsString);
-      u.emitToRooms(io, '/bots', botRooms, key, newObjectAsString);
+      const rooms = [obj.id];
+      const bots = obj.type && obj.type.bots && obj.type.bots.map(bot => bot.id);
+      u.emitToClients(io, '/rooms', rooms, key, newObjectAsString);
+      u.emitToClients(io, '/bots', bots , key, newObjectAsString);
     }
   }
 

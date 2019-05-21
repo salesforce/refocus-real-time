@@ -269,7 +269,7 @@ function initializeBotNamespace(inst, io) {
  * @param {Socket.io} io - The socketio's server side object
  */
 function initializeNamespace(namespace, io) {
-  trackedRooms[namespace] = new Set();
+  connectedRooms[namespace] = new Set();
   io.of(namespace).on('connect', (socket) =>
     Promise.join(
       validateIp(socket),
@@ -302,11 +302,11 @@ function addToRoom(socket) {
  * Keep track of which rooms are active for the namespace
  * @param {Socket} socket - The socket connection
  */
-const trackedRooms = {};
+const connectedRooms = {};
 function trackConnectedRooms(socket) {
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
-  trackedRooms[nsp.name].add(roomName);
+  connectedRooms[nsp.name].add(roomName);
 
   socket.on('disconnect', () => {
     const allSockets = Object.values(nsp.connected);
@@ -315,7 +315,7 @@ function trackConnectedRooms(socket) {
     );
 
     if (!roomIsActive) {
-      trackedRooms[nsp.name].delete(roomName);
+      connectedRooms[nsp.name].delete(roomName);
     }
   });
 }
@@ -409,11 +409,11 @@ function getNewObjAsString(key, obj) {
  * Emit to all specified rooms.
  * @param {Socket.io} io - socket.io server
  * @param {String}  nsp - the namespace to emit to
- * @param {Array}  rooms - list of rooms to emit to
+ * @param {Array}  rooms - names of socket.io rooms to emit to
  * @param {String}  key - event type
  * @param {Object}  obj - event body
  */
-function emitToRooms(io, nsp, rooms, key, obj) {
+function emitToClients(io, nsp, rooms, key, obj) {
   const namespace = io.of(nsp);
   if (rooms && rooms.length) {
     rooms.forEach((room) =>
@@ -451,8 +451,8 @@ module.exports = {
   initializeBotNamespace,
   initializePerspectiveNamespace,
   initializeNamespace,
-  trackedRooms,
+  connectedRooms,
   shouldIEmitThisObj,
-  emitToRooms,
+  emitToClients,
   parseObject,
 }; // exports

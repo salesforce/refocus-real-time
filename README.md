@@ -34,7 +34,9 @@ heroku addons:attach redis-vertical-91027 -a rf-rt-spike
 * `REFOCUS_API_TOKEN`: must be a valid token with API access to retrieve list of
    perspectives from the back-end api app
 * `SECRET`: must be the same as the one used by the back-end API application
-* `TOKEN_AUTH_TIMEOUT`: the time to wait for the client to send a token before disconnecting
+* `TOKEN_AUTH_TIMEOUT`: the time in ms to wait for the client to send a token before disconnecting
+
+### Toggles ("true" to enable, disabled by default)
 * `USE_OLD_NAMESPACE_FORMAT`: accept connections from clients using the old namespace format,
    with the filter details in the namespace itself
 * `USE_NEW_NAMESPACE_FORMAT`: accept connections from clients using the new namespace format,
