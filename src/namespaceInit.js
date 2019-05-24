@@ -34,7 +34,7 @@ module.exports = (io) => {
         .get(`${conf.apiUrl}/v1/perspectives`)
         .set('Authorization', conf.apiToken),
       req
-      .get(`${conf.apiUrl}/v1/rooms?active=true`)
+        .get(`${conf.apiUrl}/v1/rooms?active=true`)
         .set('Authorization', conf.apiToken),
     )
     .then(([perspectivesResponse, roomsResponse]) => {
