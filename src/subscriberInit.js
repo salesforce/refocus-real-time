@@ -1,3 +1,16 @@
+/**
+ * Copyright (c) 2019, salesforce.com, inc.
+ * All rights reserved.
+ * Licensed under the BSD 3-Clause license.
+ * For full license text, see LICENSE.txt file in the repo root or
+ * https://opensource.org/licenses/BSD-3-Clause
+ */
+
+/**
+ * src/subscriberInit.js
+ *
+ * Subscribe to pubSub messages and pass them through to the emitter.
+ */
 const debug = require('debug')('refocus-real-time:subscriber');
 const redis = require('redis');
 const conf = require('../conf/config');

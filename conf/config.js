@@ -7,7 +7,7 @@
  */
 
 /**
- * ./config.js
+ * conf/config.js
  *
  * Configuration Settings
  */
