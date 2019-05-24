@@ -14,12 +14,12 @@ git push heroku master
 ##### Attach the redis pubsub addons
 Attach the redis pubsub addons from the back-end api app
 into *this* app, e.g. if the redis addon is named
-"redis-vertical-91027" in the back-end api app, and if the
-real-time app is "rf-rt-spike" then this command will
+"redis-randomword-00000" in the back-end api app, and if the
+real-time app is "my-app-name" then this command will
 attach that redis pubsub instance to this application:
 
 ```
-heroku addons:attach redis-vertical-91027 -a rf-rt-spike
+heroku addons:attach redis-randomword-00000 --app my-app-name
 ```
 
 ## Config Vars in the Real-Time Application
