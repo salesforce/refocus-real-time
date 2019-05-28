@@ -27,11 +27,18 @@ heroku addons:attach redis-randomword-00000 --app my-app-name
 * `IP_WHITELIST_SERVICE`: the url of the whitelisting app
 * `PORT`: the port to run the socket.io server on
 * `REDIS_PUBSUB_BOTS`: the name of the environment variable that contains the
-  url of the redis instance used for bot pubsub
+   url of the redis instance used for bot pubsub
 * `REDIS_PUBSUB_PERSPECTIVES`: a comma-separated list of environment variables that contain the
-  urls of the redis instances used for perspective pubsub
+   urls of the redis instances used for perspective pubsub
 * `REFOCUS_API_URL`: the url of the api app
 * `REFOCUS_API_TOKEN`: must be a valid token with API access to retrieve list of
    perspectives from the back-end api app
 * `SECRET`: must be the same as the one used by the back-end API application
+* `TOKEN_AUTH_TIMEOUT`: the time in ms to wait for the client to send a token before disconnecting
+
+### Toggles ("true" to enable, disabled by default)
+* `USE_OLD_NAMESPACE_FORMAT`: accept connections from clients using the old namespace format,
+   with the filter details in the namespace itself
+* `USE_NEW_NAMESPACE_FORMAT`: accept connections from clients using the new namespace format,
+   with the filter details in the "id" query param
 
