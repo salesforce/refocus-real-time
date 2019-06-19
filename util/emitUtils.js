@@ -197,7 +197,7 @@ function shouldIEmitThisObj(nspString, obj, pubOpts) {
  * statusFilterType=statusFilter.
  * NOTE: It looks like socketIO is not able to send data over namespace
  * containing ',' and a combination of '&|' characters.
- * @param  {Instance} inst - Perspective object
+ * @param  {Object} inst - Perspective object
  * @returns {String} - namespace string.
  */
 function getPerspectiveNamespaceString(inst) {
@@ -237,7 +237,7 @@ function getBotsNamespaceString(inst) {
 // OLD - remove along with namespace toggles
 /**
  * Initializes a socketIO namespace based on the perspective object.
- * @param {Instance} inst - The perspective instance.
+ * @param {Object} inst - The perspective instance.
  * @param {Socket.io} io - The socketio's server side object
  */
 function initializePerspectiveNamespace(inst, io) {
@@ -249,6 +249,7 @@ function initializePerspectiveNamespace(inst, io) {
     )
     .catch((err) => {
       console.error('socket connect failed:', err)
+      socket.emit('auth error', err.message);
       socket.disconnect();
     })
   );
@@ -257,7 +258,7 @@ function initializePerspectiveNamespace(inst, io) {
 // OLD - remove along with namespace toggles
 /**
  * Initializes a socketIO namespace based on the bot object.
- * @param {Instance} inst - The perspective instance.
+ * @param {Object} inst - The perspective instance.
  * @param {Socket.io} io - The socketio's server side object
  */
 function initializeBotNamespace(inst, io) {
@@ -269,6 +270,7 @@ function initializeBotNamespace(inst, io) {
     )
     .catch((err) => {
       console.error('socket connect failed:', err)
+      socket.emit('auth error', err.message);
       socket.disconnect();
     })
   );
@@ -295,6 +297,7 @@ function initializeNamespace(namespace, io) {
     })
     .catch((err) => {
       console.error('socket connect failed:', err)
+      socket.emit('auth error', err.message);
       socket.disconnect();
     })
   );
@@ -337,7 +340,7 @@ function trackConnectedRooms(socket) {
 function validateTokenOldFormat(socket) {
   const token = socket.handshake.query && socket.handshake.query.t;
   if (!token) {
-    throw new Error('Access denied: no token provided');
+    return Promise.reject(new Error('Access denied: no token provided'));
   }
 
   return jwtVerifyAsync(socket.handshake.query.t, conf.secret)
@@ -346,8 +349,13 @@ function validateTokenOldFormat(socket) {
 // NEW
 function validateTokenNewFormat(socket) {
   return new Promise((resolve) => socket.once('auth', resolve))
-  .then((token) =>
-    jwtVerifyAsync(token, conf.secret)
+  .then((token) => Promise.join(
+    token,
+    jwtVerifyAsync(token, conf.secret),
+  ))
+  .then(([token, { username, tokenname }]) =>
+    request.get(`${conf.apiUrl}/v1/users/${username}/tokens/${tokenname}`)
+           .set('Authorization', token)
   )
   .timeout(conf.authTimeout);
 }
