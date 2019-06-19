@@ -15,22 +15,42 @@ chai.use(require('chai-as-promised'));
 chai.should();
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
+const nock = require('nock');
 const conf = require('../conf/config');
-const u = require('./emitUtil');
+const connectUtil = require('./util/connectUtil');
+const emitUtil = require('./util/emitUtil');
+const testUtil = require('./util/testUtil');
 const utils = require('../util/emitUtils');
 
-describe('tests/realtime/socketIOEmitter.js >', () => {
+describe('test/socketIOEmitter.js >', () => {
   let token;
 
   before(() => {
     conf.secret = 'abcdefghijkl';
+    conf.apiUrl = 'https://www.example.com';
+
     const jwtClaim = {
       tokenname: 'token1',
       username: 'user1',
       timestamp: Date.now(),
     };
-
     token = jwt.sign(jwtClaim, conf.secret);
+
+    nock(conf.apiUrl)
+    .persist()
+    .get('/v1/users/user1/tokens/token1')
+    .matchHeader('Authorization', token)
+    .reply(200);
+
+    nock(conf.apiUrl)
+    .persist()
+    .get('/v1/users/user1/tokens/token1')
+    .reply(401);
+
+    nock(conf.apiUrl)
+    .persist()
+    .get((path) => path.startsWith('/v1/users/'))
+    .reply(404);
   });
 
   const botFilters = {
@@ -66,100 +86,100 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
   const clientFilters = {
 
     // root subject
-    noFilters: u.buildFilters({}),
-    'root.sub1': u.buildFilters({
+    noFilters: connectUtil.buildFilters({}),
+    'root.sub1': connectUtil.buildFilters({
       rootSubject: 'root.sub1',
     }),
-    'root.sub2': u.buildFilters({
+    'root.sub2': connectUtil.buildFilters({
       rootSubject: 'root.sub2',
     }),
-    'root.sub2.sub4': u.buildFilters({
+    'root.sub2.sub4': connectUtil.buildFilters({
       rootSubject: 'root.sub2.sub4',
     }),
 
     // status filter
-    ok: u.buildFilters({
+    ok: connectUtil.buildFilters({
       statusFilterInclude: ['Ok'],
     }),
-    '!ok': u.buildFilters({
+    '!ok': connectUtil.buildFilters({
       statusFilterExclude: ['Ok'],
     }),
-    'info || warning || critical': u.buildFilters({
+    'info || warning || critical': connectUtil.buildFilters({
       statusFilterInclude: ['Info', 'Warning', 'Critical'],
     }),
-    '!(ok || timeout || invalid)': u.buildFilters({
+    '!(ok || timeout || invalid)': connectUtil.buildFilters({
       statusFilterExclude: ['Ok', 'Timeout', 'Invalid'],
     }),
 
     // sub/asp - one filter
-    stag1: u.buildFilters({
+    stag1: connectUtil.buildFilters({
       subjectTagInclude: ['stag1'],
     }),
-    '!(stag1 || stag2)': u.buildFilters({
+    '!(stag1 || stag2)': connectUtil.buildFilters({
       subjectTagExclude: ['stag1', 'stag2'],
     }),
-    'atag1 || atag2': u.buildFilters({
+    'atag1 || atag2': connectUtil.buildFilters({
       aspectTagInclude: ['atag1', 'atag2'],
     }),
-    '!atag1': u.buildFilters({
+    '!atag1': connectUtil.buildFilters({
       aspectTagExclude: ['atag1'],
     }),
-    'asp1 || asp2': u.buildFilters({
+    'asp1 || asp2': connectUtil.buildFilters({
       aspectNameInclude: ['asp1', 'asp2'],
     }),
-    '!(asp1 || asp2)': u.buildFilters({
+    '!(asp1 || asp2)': connectUtil.buildFilters({
       aspectNameExclude: ['asp1', 'asp2'],
     }),
 
     // sub/asp - two filters
-    'stag1 && (atag1 || atag2)': u.buildFilters({
+    'stag1 && (atag1 || atag2)': connectUtil.buildFilters({
       subjectTagInclude: ['stag1'],
       aspectTagInclude: ['atag1', 'atag2'],
     }),
-    'atag1 && !(asp1 || asp2)': u.buildFilters({
+    'atag1 && !(asp1 || asp2)': connectUtil.buildFilters({
       aspectTagInclude: ['atag1'],
       aspectNameExclude: ['asp1', 'asp2'],
     }),
-    '!(stag1 || stag2) && !(atag1 || atag2)': u.buildFilters({
+    '!(stag1 || stag2) && !(atag1 || atag2)': connectUtil.buildFilters({
       subjectTagExclude: ['stag1', 'stag2'],
       aspectTagExclude: ['atag1', 'atag2'],
     }),
 
     // sub/asp - three filters
-    'stag1 && (atag1 || atag2) && asp1': u.buildFilters({
+    'stag1 && (atag1 || atag2) && asp1': connectUtil.buildFilters({
       subjectTagInclude: ['stag1'],
       aspectTagInclude: ['atag1', 'atag2'],
       aspectNameInclude: ['asp1'],
     }),
-    'stag1 && atag1 && !asp1': u.buildFilters({
+    'stag1 && atag1 && !asp1': connectUtil.buildFilters({
       subjectTagInclude: ['stag1'],
       aspectTagInclude: ['atag1'],
       aspectNameExclude: ['asp1'],
     }),
-    '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)': u.buildFilters({
+    '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)': connectUtil.buildFilters({
       subjectTagExclude: ['stag1', 'stag2'],
       aspectTagExclude: ['atag1', 'atag2'],
       aspectNameInclude: ['asp1', 'asp2'],
     }),
-    '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)': u.buildFilters({
+    '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)': connectUtil.buildFilters({
       subjectTagExclude: ['stag1', 'stag2'],
       aspectTagExclude: ['atag1'],
       aspectNameExclude: ['asp1', 'asp2'],
     }),
 
     // all filters
-    'root.sub1: atag1 - info || warning || critical': u.buildFilters({
+    'root.sub1: atag1 - info || warning || critical': connectUtil.buildFilters({
       rootSubject: 'root.sub1',
       statusFilterInclude: ['Info', 'Warning', 'Critical'],
       aspectTagInclude: ['atag1'],
     }),
-    'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)': u.buildFilters({
+    'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)': connectUtil.buildFilters({
       rootSubject: 'root.sub2',
       statusFilterExclude: ['Ok', 'Info'],
       subjectTagExclude: ['stag1'],
       aspectTagInclude: ['atag1', 'atag2'],
     }),
-    'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok': u.buildFilters({
+    'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok': connectUtil.buildFilters({
       rootSubject: 'root.sub2.sub4',
       statusFilterInclude: ['Ok'],
       subjectTagInclude: ['stag1'],
@@ -174,8 +194,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       let connectedClients;
 
       before(() => {
-        u.toggleOverride('useOldNamespaceFormat', true);
-        u.toggleOverride('useNewNamespaceFormat', false);
+        testUtil.toggleOverride('useOldNamespaceFormat', true);
+        testUtil.toggleOverride('useNewNamespaceFormat', false);
         sioServer = require('socket.io')(3000);
 
         Object.values(clientFilters).forEach((p) =>
@@ -189,13 +209,13 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
         );
 
         return Promise.join(
-          u.connectPerspectivesOldFormat(sioServer, clientFilters, token),
-          u.connectBotsOldFormat(sioServer, botFilters, token),
-          u.connectRoomsOldFormat(sioServer, roomFilters, token),
+          connectUtil.connectPerspectivesOldFormat(sioServer, clientFilters, token),
+          connectUtil.connectBotsOldFormat(sioServer, botFilters, token),
+          connectUtil.connectRoomsOldFormat(sioServer, roomFilters, token),
         )
         .then(([perspectiveClients, botClients, roomClients]) => {
           connectedClients = { ...perspectiveClients, ...botClients, ...roomClients };
-          u.setupTestFuncs({
+          emitUtil.setupTestFuncs({
             sioServer,
             perspectiveClients,
             botClients,
@@ -207,9 +227,9 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       });
 
       after((done) => {
-        u.toggleOverride('useOldNamespaceFormat', false);
-        u.toggleOverride('useNewNamespaceFormat', false);
-        u.closeClients(connectedClients);
+        testUtil.toggleOverride('useOldNamespaceFormat', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', false);
+        connectUtil.closeClients(connectedClients);
         sioServer.close(done);
       });
 
@@ -221,21 +241,21 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       let connectedClients;
 
       before(() => {
-        u.toggleOverride('useOldNamespaceFormat', false);
-        u.toggleOverride('useNewNamespaceFormat', true);
+        testUtil.toggleOverride('useOldNamespaceFormat', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', true);
         sioServer = require('socket.io')(3000);
         utils.initializeNamespace('/bots', sioServer);
         utils.initializeNamespace('/rooms', sioServer);
         utils.initializeNamespace('/perspectives', sioServer);
 
         return Promise.join(
-          u.connectPerspectivesNewFormat(sioServer, clientFilters, token),
-          u.connectBotsNewFormat(sioServer, botFilters, token),
-          u.connectRoomsNewFormat(sioServer, roomFilters, token),
+          connectUtil.connectPerspectivesNewFormat(sioServer, clientFilters, token),
+          connectUtil.connectBotsNewFormat(sioServer, botFilters, token),
+          connectUtil.connectRoomsNewFormat(sioServer, roomFilters, token),
         )
         .then(([perspectiveClients, botClients, roomClients]) => {
           connectedClients = { ...perspectiveClients, ...botClients, ...roomClients };
-          u.setupTestFuncs({
+          emitUtil.setupTestFuncs({
             sioServer,
             perspectiveClients,
             botClients,
@@ -245,9 +265,9 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       });
 
       after((done) => {
-        u.toggleOverride('useOldNamespaceFormat', false);
-        u.toggleOverride('useNewNamespaceFormat', false);
-        u.closeClients(connectedClients);
+        testUtil.toggleOverride('useOldNamespaceFormat', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', false);
+        connectUtil.closeClients(connectedClients);
         sioServer.close(done);
       });
 
@@ -259,8 +279,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       let connectedClients;
 
       before(() => {
-        u.toggleOverride('useOldNamespaceFormat', true);
-        u.toggleOverride('useNewNamespaceFormat', true);
+        testUtil.toggleOverride('useOldNamespaceFormat', true);
+        testUtil.toggleOverride('useNewNamespaceFormat', true);
         sioServer = require('socket.io')(3000);
 
         // old format
@@ -280,22 +300,22 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
         utils.initializeNamespace('/perspectives', sioServer);
 
         return Promise.join(
-          u.connectPerspectivesOldFormat(sioServer, clientFilters, token),
-          u.connectPerspectivesNewFormat(sioServer, clientFilters, token),
-          u.connectBotsOldFormat(sioServer, botFilters, token),
-          u.connectBotsNewFormat(sioServer, botFilters, token),
-          u.connectRoomsOldFormat(sioServer, roomFilters, token),
-          u.connectRoomsNewFormat(sioServer, roomFilters, token),
+          connectUtil.connectPerspectivesOldFormat(sioServer, clientFilters, token),
+          connectUtil.connectPerspectivesNewFormat(sioServer, clientFilters, token),
+          connectUtil.connectBotsOldFormat(sioServer, botFilters, token),
+          connectUtil.connectBotsNewFormat(sioServer, botFilters, token),
+          connectUtil.connectRoomsOldFormat(sioServer, roomFilters, token),
+          connectUtil.connectRoomsNewFormat(sioServer, roomFilters, token),
         )
         .then(([
           oldClients, newClients, oldBotClients,
           newBotClients, oldRoomClients, newRoomClients
         ]) => {
-          const perspectiveClients = u.mergeClients(oldClients, newClients);
-          const botClients = u.mergeClients(oldBotClients, newBotClients);
-          const roomClients = u.mergeClients(oldRoomClients, newRoomClients);
+          const perspectiveClients = connectUtil.mergeClients(oldClients, newClients);
+          const botClients = connectUtil.mergeClients(oldBotClients, newBotClients);
+          const roomClients = connectUtil.mergeClients(oldRoomClients, newRoomClients);
           connectedClients = { ...perspectiveClients, ...botClients, ...roomClients };
-          u.setupTestFuncs({
+          emitUtil.setupTestFuncs({
             sioServer,
             perspectiveClients,
             botClients,
@@ -307,9 +327,9 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       });
 
       after((done) => {
-        u.toggleOverride('useOldNamespaceFormat', false);
-        u.toggleOverride('useNewNamespaceFormat', false);
-        u.closeClients(connectedClients);
+        testUtil.toggleOverride('useOldNamespaceFormat', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', false);
+        connectUtil.closeClients(connectedClients);
         sioServer.close(done);
       });
 
@@ -323,8 +343,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       describe('imc', () => {
         describe('botAction', () => {
           it('bot2, room3', function () {
-            return u.testBotActionUpdate({
-              eventBody: u.textToBotAction(this.test.title),
+            return emitUtil.testBotActionUpdate({
+              eventBody: emitUtil.textToBotAction(this.test.title),
               botExpectations: [
                 [_, 'bot1'],
                 [x, 'bot2'],
@@ -341,8 +361,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('botData', () => {
           it('bot3, room1', function () {
-            return u.testBotDataUpdate({
-              eventBody: u.textToBotData(this.test.title),
+            return emitUtil.testBotDataUpdate({
+              eventBody: emitUtil.textToBotData(this.test.title),
               botExpectations: [
                 [_, 'bot1'],
                 [_, 'bot2'],
@@ -359,8 +379,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('botEvent', () => {
           it('bot1, room1', function () {
-            return u.testBotEventUpdate({
-              eventBody: u.textToBotEvent(this.test.title),
+            return emitUtil.testBotEventUpdate({
+              eventBody: emitUtil.textToBotEvent(this.test.title),
               botExpectations: [
                 [x, 'bot1'],
                 [_, 'bot2'],
@@ -377,8 +397,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('room', () => {
           it('room1, [bot2]', function () {
-            return u.testRoomUpdate({
-              eventBody: u.textToRoom(this.test.title),
+            return emitUtil.testRoomUpdate({
+              eventBody: emitUtil.textToRoom(this.test.title),
               botExpectations: [
                 [_, 'bot1'],
                 [x, 'bot2'],
@@ -393,8 +413,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('room2, [bot1, bot3]', function () {
-            return u.testRoomUpdate({
-              eventBody: u.textToRoom(this.test.title),
+            return emitUtil.testRoomUpdate({
+              eventBody: emitUtil.textToRoom(this.test.title),
               botExpectations: [
                 [x, 'bot1'],
                 [_, 'bot2'],
@@ -409,8 +429,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('room3, [bot1, bot2, bot3]', function () {
-            return u.testRoomUpdate({
-              eventBody: u.textToRoom(this.test.title),
+            return emitUtil.testRoomUpdate({
+              eventBody: emitUtil.textToRoom(this.test.title),
               botExpectations: [
                 [x, 'bot1'],
                 [x, 'bot2'],
@@ -429,8 +449,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       describe('subjectUpdate', () => {
         describe('absolutePath', () => {
           it('root:', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -461,8 +481,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0:', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -493,8 +513,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub1:', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -525,8 +545,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2:', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -557,8 +577,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4:', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -589,8 +609,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub5:', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -621,8 +641,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('notRoot:', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [_, 'noFilters'],
                 [_, 'root.sub1'],
@@ -655,8 +675,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('tags', () => {
           it('root.sub0: [stag1]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -687,8 +707,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0: [stag2]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -719,8 +739,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0: [stag0]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -753,8 +773,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('absPath + tags', () => {
           it('root.sub1: [stag1]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -785,8 +805,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub1: [stag2]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -817,8 +837,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2: [stag1]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -849,8 +869,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2: [stag2]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -881,8 +901,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4: [stag1]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -913,8 +933,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4: [stag2]', function () {
-            return u.testSubjectUpdate({
-              eventBody: u.textToSubject(this.test.title),
+            return emitUtil.testSubjectUpdate({
+              eventBody: emitUtil.textToSubject(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -949,8 +969,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       describe('sampleUpdate', () => {
         describe('no filter fields', () => {
           it('root.sub0|asp0 - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -983,8 +1003,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('absolutePath', () => {
           it('root.sub1|asp0 - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -1015,8 +1035,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2|asp0 - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1047,8 +1067,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4|asp0 - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1081,8 +1101,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('status', () => {
           it('root.sub0|asp0 - Critical', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1113,8 +1133,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp0 - Timeout', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1147,8 +1167,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('sub tags', () => {
           it('root.sub0|asp0: [stag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1179,8 +1199,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp0: [stag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1211,8 +1231,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp0: [stag1, stag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1245,8 +1265,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('asp tags', () => {
           it('root.sub0|asp0: [atag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1277,8 +1297,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp0: [atag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1309,8 +1329,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp0: [atag1, atag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1343,8 +1363,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('asp name', () => {
           it('root.sub0|asp1 - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1375,8 +1395,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp2 - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1409,8 +1429,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('sub/asp - two filter fields', () => {
           it('root.sub0|asp0: [stag1] [atag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1441,8 +1461,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp1: [stag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1473,8 +1493,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp2: [atag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1507,8 +1527,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('sub/asp - three filter fields', () => {
           it('root.sub0|asp1: [stag1] [atag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1539,8 +1559,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp1: [stag2] [atag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1571,8 +1591,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp2: [stag1] [atag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1603,8 +1623,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub0|asp2: [stag2] [atag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1637,8 +1657,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
         describe('all filter fields', () => {
           it('root.sub1|asp1: [stag1] [atag1] - Critical', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -1669,8 +1689,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub1|asp1: [stag1] [atag1] - Info', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -1701,8 +1721,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2|asp1: [stag1] [atag1] - Info', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1733,8 +1753,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub1|asp1: [stag1] [atag2] - Info', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -1765,8 +1785,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub1|asp1: [stag1] [atag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -1797,8 +1817,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2|asp1: [stag2] [atag1] - Warning', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1829,8 +1849,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2|asp1: [atag1] - Warning', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1861,8 +1881,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub1|asp1: [stag2] [atag1] - Warning', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [x, 'root.sub1'],
@@ -1893,8 +1913,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2|asp1: [stag1] [atag1] - Warning', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1925,8 +1945,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2|asp1: [stag2] - Warning', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1957,8 +1977,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2|asp1: [stag2] [atag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -1989,8 +2009,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4|asp0: [stag1] [atag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -2021,8 +2041,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4|asp0: [stag1] [atag2] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -2053,8 +2073,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4|asp0: [stag1] [atag1] - Info', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -2085,8 +2105,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4|asp0: [stag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -2117,8 +2137,8 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
           });
 
           it('root.sub2.sub4|asp0: [stag2] [atag1] - Ok', function () {
-            return u.testSampleUpdate({
-              eventBody: u.textToSample(this.test.title),
+            return emitUtil.testSampleUpdate({
+              eventBody: emitUtil.textToSample(this.test.title),
               clientExpectations: [
                 [x, 'noFilters'],
                 [_, 'root.sub1'],
@@ -2156,15 +2176,15 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
     let sioServer;
     let clients;
     beforeEach(() => {
-      u.toggleOverride('useOldNamespaceFormat', false);
-      u.toggleOverride('useNewNamespaceFormat', true);
+      testUtil.toggleOverride('useOldNamespaceFormat', false);
+      testUtil.toggleOverride('useNewNamespaceFormat', true);
       sioServer = require('socket.io')(3000);
       utils.initializeNamespace('/perspectives', sioServer);
     });
 
     afterEach((done) => {
-      u.toggleOverride('useOldNamespaceFormat', false);
-      u.toggleOverride('useNewNamespaceFormat', false);
+      testUtil.toggleOverride('useOldNamespaceFormat', false);
+      testUtil.toggleOverride('useNewNamespaceFormat', false);
       clients.forEach((client) => client.close());
       sioServer.close(done);
     });
@@ -2177,15 +2197,15 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
 
       beforeEach(() => {
         filters = clientFilters[sampleName];
-        const client1 = u.connectPerspectiveNewFormat(filters, token, { autoConnect: false });
-        const client2 = u.connectPerspectiveNewFormat(filters, token, { autoConnect: false });
-        const client3 = u.connectPerspectiveNewFormat(filters, token, { autoConnect: false });
+        const client1 = connectUtil.connectPerspectiveNewFormat(sioServer, filters, token, false);
+        const client2 = connectUtil.connectPerspectiveNewFormat(sioServer, filters, token, false);
+        const client3 = connectUtil.connectPerspectiveNewFormat(sioServer, filters, token, false);
         clients = [client1, client2, client3];
 
         const x = true; // event expected
         const _ = false; // event not expected
-        connectClients = u.bindOpenCloseByClient(clients);
-        expectByClient = u.bindEmitAndExpectByClient({
+        connectClients = connectUtil.bindOpenCloseByClient(clients);
+        expectByClient = emitUtil.bindEmitAndExpectByClient({
           sioServer,
           clients,
           eventExpectations: [
@@ -2270,9 +2290,9 @@ describe('tests/realtime/socketIOEmitter.js >', () => {
       it('make sure the filtering is only done when necessary', () => {
         const samp = 'root.sub0|asp0 - Ok';
         const nspString = utils.getPerspectiveNamespaceString(filters);
-        const expectFiltered = u.bindEmitAndStubFilterCheck({
+        const expectFiltered = emitUtil.bindEmitAndStubFilterCheck({
           sioServer,
-          eventBody: u.textToSample(samp),
+          eventBody: emitUtil.textToSample(samp),
           nspString,
         });
 
