@@ -16,13 +16,14 @@
   "dependencies": {
     "bluebird": "^3.5.4",
     "debug": "^4.1.1",
-    "express": "^4.16.4",
+    "express": "^4.17.1",
     "feature-toggles": "^1.4.0",
     "http": "0.0.0",
     "jsonwebtoken": "^8.5.1",
     "redis": "^2.8.0",
     "socket.io": "^2.2.0",
-    "superagent": "^5.0.2"
+    "superagent": "^5.1.0",
+    "winston": "^3.2.1"
   },
   "devDependencies": {
     "chai": "^4.2.0",
