@@ -54,7 +54,7 @@ describe('test/clientConnect.js >', () => {
     .reply(404);
   });
 
-  after(() => nock.restore());
+  after(() => nock.cleanAll());
 
   const perspectiveFilters = {
     rootSubject: 'root',

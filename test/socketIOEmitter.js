@@ -53,6 +53,8 @@ describe('test/socketIOEmitter.js >', () => {
     .reply(404);
   });
 
+  after(() => nock.cleanAll());
+
   const botFilters = {
     bot1: {
       name: 'bot1',
