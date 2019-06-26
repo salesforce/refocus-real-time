@@ -19,6 +19,7 @@ const pe = process.env;
 const config = {
   apiUrl: pe.REFOCUS_API_URL,
   apiToken: pe.REFOCUS_API_TOKEN,
+  authTimeout: pe.TOKEN_AUTH_TIMEOUT || 5000,
   dyno: pe.DYNO || null,
   ipWhitelistService: pe.IP_WHITELIST_SERVICE || '',
   port: pe.PORT || 3000,
