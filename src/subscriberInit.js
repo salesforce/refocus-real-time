@@ -33,7 +33,8 @@ module.exports = {
 
     // console.log('--- 2.2 ---')
     conf.pubSubPerspectives
-    .map(redis.createClient)
+    // .map(redis.createClient)
+    .map((url) => redis.createClient(url))
     // // .map((url) => redis.createClient(url, { no_ready_check: true })
     .forEach((client) => {
       clients.push(client);

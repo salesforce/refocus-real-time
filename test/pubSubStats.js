@@ -143,7 +143,7 @@ describe('test/pubSubStats.js >', () => {
       testUtil.toggleOverride('enablePubSubStatsLogs', false);
       delete global[globalKey];
       inspect.restore();
-      pubClient.quit();
+      // pubClient.quit();
       subscriberInit.cleanup();
       io.close(done);
     });
