@@ -130,20 +130,16 @@ describe('test/pubSubStats.js >', () => {
       conf.pubSubStatsLoggingInterval = 50;
       testUtil.toggleOverride('enablePubSubStatsLogs', true);
 
-      console.error('--- 1 ---')
-      // pubClient = redis.createClient(redisUrl);
-      // pubClient = redis.createClient(redisUrl, { no_ready_check: true });
+      pubClient = redis.createClient(redisUrl);
       io = require('socket.io')(conf.port);
-      console.error('--- 2 ---')
       subscriberInit.init(io, processName);
-      console.error('--- 3 ---')
     });
 
     after((done) => {
       testUtil.toggleOverride('enablePubSubStatsLogs', false);
       delete global[globalKey];
       inspect.restore();
-      // pubClient.quit();
+      pubClient.quit();
       subscriberInit.cleanup();
       io.close(done);
     });

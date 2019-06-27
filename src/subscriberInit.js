@@ -23,7 +23,6 @@ let interval;
 const clients = [];
 module.exports = {
   init(io, processName) {
-    console.log('--- 2.1 ---')
     if (featureToggles.isFeatureEnabled('enablePubSubStatsLogs')) {
       interval = setInterval(
         () => pubSubStats.log(processName),
@@ -31,7 +30,6 @@ module.exports = {
       );
     }
 
-    // console.log('--- 2.2 ---')
     conf.pubSubPerspectives
     // .map(redis.createClient)
     .map((url) => redis.createClient(url))
@@ -42,7 +40,6 @@ module.exports = {
       client.on('message', emitMessage);
     });
     //
-    // console.log('--- 2.3 ---')
     // conf.pubSubBots
     // .map(redis.createClient)
     // // .map((url) => redis.createClient(url, { no_ready_check: true })
