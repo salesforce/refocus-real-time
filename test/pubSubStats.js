@@ -131,7 +131,7 @@ describe('test/pubSubStats.js >', () => {
       testUtil.toggleOverride('enablePubSubStatsLogs', true);
 
       console.error('--- 1 ---')
-      pubClient = redis.createClient(redisUrl);
+      // pubClient = redis.createClient(redisUrl);
       // pubClient = redis.createClient(redisUrl, { no_ready_check: true });
       io = require('socket.io')(conf.port);
       console.error('--- 2 ---')

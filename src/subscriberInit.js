@@ -32,14 +32,14 @@ module.exports = {
     }
 
     // console.log('--- 2.2 ---')
-    // conf.pubSubPerspectives
-    // .map(redis.createClient)
+    conf.pubSubPerspectives
+    .map(redis.createClient)
     // // .map((url) => redis.createClient(url, { no_ready_check: true })
-    // .forEach((client) => {
-    //   clients.push(client);
-    //   client.subscribe(conf.perspectiveChannel);
-    //   client.on('message', emitMessage);
-    // });
+    .forEach((client) => {
+      clients.push(client);
+      client.subscribe(conf.perspectiveChannel);
+      client.on('message', emitMessage);
+    });
     //
     // console.log('--- 2.3 ---')
     // conf.pubSubBots
