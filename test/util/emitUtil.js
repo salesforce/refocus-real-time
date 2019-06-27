@@ -282,7 +282,7 @@ function expectEvents(eventType, clientExpectations, clients, expectOverrides=[]
 function expectEvent(eventType, expected, client, clientName) {
   const awaitPromise = awaitEvent(client, eventType)
   .then(() => clientName)
-  .timeout(100)
+  .timeout(50)
   .catch((err) => {
     err.message += ': ' + clientName;
     return Promise.reject(err);
