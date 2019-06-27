@@ -148,7 +148,8 @@ describe('test/pubSubStats.js >', () => {
     const addRe = /info: activity=pubsub key=sample.add process=p1 subCount=2 subTime=\d+ \n/;
     const delRe = /info: activity=pubsub key=sample.delete process=p1 subCount=1 subTime=\d+ \n/;
 
-    it('end-to-end', () => {
+    it('end-to-end', function () {
+      this.timeout(6000);
       const upd = {
         'sample.update': { updatedAt: Date.now() - 1000 },
       }
@@ -167,7 +168,7 @@ describe('test/pubSubStats.js >', () => {
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(del));
 
-      return Promise.delay(1900)
+      return Promise.delay(5000)
              .then(() => {
                expect(inspect.output).to.be.an('Array');
                expect(inspect.output).to.have.lengthOf(3);
