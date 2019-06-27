@@ -248,7 +248,6 @@ function initializePerspectiveNamespace(inst, io) {
       validateTokenOldFormat(socket),
     )
     .catch((err) => {
-      console.error('socket connect failed:', err)
       socket.emit('auth error', err.message);
       socket.disconnect();
     })
@@ -269,7 +268,6 @@ function initializeBotNamespace(inst, io) {
       validateTokenOldFormat(socket),
     )
     .catch((err) => {
-      console.error('socket connect failed:', err)
       socket.emit('auth error', err.message);
       socket.disconnect();
     })
@@ -296,7 +294,6 @@ function initializeNamespace(namespace, io) {
       socket.emit('authenticated');
     })
     .catch((err) => {
-      console.error('socket connect failed:', err)
       socket.emit('auth error', err.message);
       socket.disconnect();
     })
