@@ -119,6 +119,7 @@ describe('test/pubSubStats.js >', () => {
   describe('end-to-end >', () => {
     let io;
     let pubClient;
+    let subClients;
     let inspect;
     const redisUrl = process.env.REDIS_URL || '//127.0.0.1:6379';
     const processName = 'p1';
@@ -132,7 +133,7 @@ describe('test/pubSubStats.js >', () => {
 
       pubClient = redis.createClient(redisUrl);
       io = require('socket.io')(conf.port);
-      subscriberInit.init(io, processName);
+      subClients = subscriberInit.init(io, processName);
     });
 
     after((done) => {
@@ -168,14 +169,20 @@ describe('test/pubSubStats.js >', () => {
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(del));
 
-      return Promise.delay(5000)
-             .then(() => {
-               expect(inspect.output).to.be.an('Array');
-               expect(inspect.output).to.have.lengthOf(3);
-               expect(inspect.output[0]).to.match(updRe);
-               expect(inspect.output[1]).to.match(addRe);
-               expect(inspect.output[2]).to.match(delRe);
-             });
+      return new Promise((resolve) => {
+        let count = 0;
+        subClients[0].on('message', () =>
+          count++ && count === 7 && resolve(count)
+        );
+      })
+      .delay(conf.pubSubStatsLoggingInterval)
+      .then(() => {
+        expect(inspect.output).to.be.an('Array');
+        expect(inspect.output).to.have.lengthOf(3);
+        expect(inspect.output[0]).to.match(updRe);
+        expect(inspect.output[1]).to.match(addRe);
+        expect(inspect.output[2]).to.match(delRe);
+      });
     });
   });
 });

@@ -46,6 +46,8 @@ module.exports = {
       client.on('message', emitMessage);
     });
 
+    return clients;
+
     function emitMessage(channel, messageAsString) {
       const obj = JSON.parse(messageAsString);
       const key = Object.keys(obj)[0];
