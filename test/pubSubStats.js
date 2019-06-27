@@ -130,9 +130,13 @@ describe('test/pubSubStats.js >', () => {
       conf.pubSubStatsLoggingInterval = 50;
       testUtil.toggleOverride('enablePubSubStatsLogs', true);
 
+      console.log('--- 1 ---')
       pubClient = redis.createClient(redisUrl);
+      // pubClient = redis.createClient(redisUrl, { no_ready_check: true });
       io = require('socket.io')(conf.port);
+      console.log('--- 2 ---')
       subscriberInit.init(io, processName);
+      console.log('--- 3 ---')
     });
 
     after((done) => {
