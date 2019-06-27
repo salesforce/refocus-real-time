@@ -149,8 +149,7 @@ describe('test/pubSubStats.js >', () => {
     const addRe = /info: activity=pubsub key=sample.add process=p1 subCount=2 subTime=\d+ \n/;
     const delRe = /info: activity=pubsub key=sample.delete process=p1 subCount=1 subTime=\d+ \n/;
 
-    it('end-to-end', function () {
-      this.timeout(6000);
+    it('end-to-end', () => {
       const upd = {
         'sample.update': { updatedAt: Date.now() - 1000 },
       }
