@@ -31,25 +31,25 @@ module.exports = {
       );
     }
 
-    console.log('--- 2.2 ---')
-    conf.pubSubPerspectives
-    .map(redis.createClient)
-    // .map((url) => redis.createClient(url, { no_ready_check: true })
-    .forEach((client) => {
-      clients.push(client);
-      client.subscribe(conf.perspectiveChannel);
-      client.on('message', emitMessage);
-    });
-
-    console.log('--- 2.3 ---')
-    conf.pubSubBots
-    .map(redis.createClient)
-    // .map((url) => redis.createClient(url, { no_ready_check: true })
-    .forEach((client) => {
-      clients.push(client);
-      client.subscribe(conf.botChannel);
-      client.on('message', emitMessage);
-    });
+    // console.log('--- 2.2 ---')
+    // conf.pubSubPerspectives
+    // .map(redis.createClient)
+    // // .map((url) => redis.createClient(url, { no_ready_check: true })
+    // .forEach((client) => {
+    //   clients.push(client);
+    //   client.subscribe(conf.perspectiveChannel);
+    //   client.on('message', emitMessage);
+    // });
+    //
+    // console.log('--- 2.3 ---')
+    // conf.pubSubBots
+    // .map(redis.createClient)
+    // // .map((url) => redis.createClient(url, { no_ready_check: true })
+    // .forEach((client) => {
+    //   clients.push(client);
+    //   client.subscribe(conf.botChannel);
+    //   client.on('message', emitMessage);
+    // });
 
     function emitMessage(channel, messageAsString) {
       const obj = JSON.parse(messageAsString);
