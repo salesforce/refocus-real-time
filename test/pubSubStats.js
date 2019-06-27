@@ -120,7 +120,7 @@ describe('test/pubSubStats.js >', () => {
     let io;
     let pubClient;
     let inspect;
-    const redisUrl = '//127.0.0.1:6379';
+    const redisUrl = process.env.REDIS_URL || '//127.0.0.1:6379';
     const processName = 'p1';
 
     before(() => {
