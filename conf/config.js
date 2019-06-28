@@ -13,17 +13,22 @@
  */
 'use strict'; // eslint-disable-line strict
 const featureToggles = require('feature-toggles');
+const ms = require('ms');
 const pe = process.env;
 
 const config = {
   apiUrl: pe.REFOCUS_API_URL,
   apiToken: pe.REFOCUS_API_TOKEN,
+  authTimeout: pe.TOKEN_AUTH_TIMEOUT || 5000,
+  dyno: pe.DYNO || null,
   ipWhitelistService: pe.IP_WHITELIST_SERVICE || '',
   port: pe.PORT || 3000,
   pubSubBots: pe.REDIS_PUBSUB_BOTS || '',
   pubSubPerspectives: pe.REDIS_PUBSUB_PERSPECTIVES || '',
+  pubSubStatsLoggingInterval: ms(pe.PUB_SUB_STATS_LOGGING_INTERVAL || '1m'),
   secret: pe.SECRET,
-  authTimeout: pe.TOKEN_AUTH_TIMEOUT || 5000,
+  webConcurrency: pe.WEB_CONCURRENCY || 1,
+  isProd: pe.NODE_ENV === 'production',
   perspectiveChannel: 'focus',
   botChannel: 'imc',
   ipWhitelistPath: 'v1/verify',
@@ -43,6 +48,9 @@ const toggles = {
 
   // use new socket.io namespace/room format
   useNewNamespaceFormat: environmentVariableTrue(pe, 'USE_NEW_NAMESPACE_FORMAT'),
+
+  // use new socket.io namespace/room format
+  enablePubSubStatsLogs: environmentVariableTrue(pe, 'ENABLE_PUBSUB_STATS_LOGS'),
 }; // shortTermToggles
 
 featureToggles.load(toggles);

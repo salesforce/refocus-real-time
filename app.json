@@ -6,7 +6,10 @@
 					"quantity": 1,
 					"size": "standard-1x"
 				}
-			}
+			},
+			"addons":[
+				"heroku-redis:in-dyno"
+			]
 		}
 	}
 }
