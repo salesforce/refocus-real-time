@@ -7,7 +7,7 @@
  */
 
 /**
- * test/emitUtil.js
+ * test/util/emitUtil.js
  */
 'use strict'; // eslint-disable-line strict
 const chai = require('chai');
@@ -16,10 +16,8 @@ chai.use(require('chai-as-promised'));
 chai.should();
 const Promise = require('bluebird');
 const sinon = require('sinon');
-const sioClient = require('socket.io-client');
-const featureToggles = require('feature-toggles');
-const emitter = require('../src/emitter');
-const u = require('../util/emitUtils');
+const emitter = require('../../src/emitter');
+const u = require('../../util/emitUtils');
 
 const sampleUpdate = 'refocus.internal.realtime.sample.update';
 const subjectUpdate = 'refocus.internal.realtime.subject.update';
@@ -41,25 +39,6 @@ const botRoomTestFuncMap = {
 };
 
 module.exports = {
-  buildFilters(filters) {
-    const base = {
-      rootSubject: 'root',
-      subjectTagFilterType: 'EXCLUDE',
-      subjectTagFilter: [],
-      aspectFilterType: 'EXCLUDE',
-      aspectFilter: [],
-      aspectTagFilterType: 'EXCLUDE',
-      aspectTagFilter: [],
-      statusFilterType: 'EXCLUDE',
-      statusFilter: [],
-    };
-
-    Object.entries(filters).forEach(([type, val]) => {
-      Object.assign(base, filterBuilders[type](val))
-    });
-    return base;
-  },
-
   textToBotAction: (text) => module.exports.textToBot('botAction', text),
   textToBotEvent: (text) => module.exports.textToBot('botEvent', text),
   textToBotData: (text) => module.exports.textToBot('botData', text),
@@ -192,132 +171,7 @@ module.exports = {
       expected,
     });
   },
-
-  bindOpenCloseByClient(clients) {
-    return (clientOpenClose) => openCloseByClient({
-      clientOpenClose: clients.map((client, i) => [clientOpenClose[i], client]),
-    });
-  },
-
-  connectPerspectivesOldFormat(sioServer, clientFilters, token) {
-    const namespaceFunc = u.getPerspectiveNamespaceString;
-    return connectClientsOldFormat(sioServer, namespaceFunc, clientFilters, token);
-  },
-
-  connectPerspectivesNewFormat(sioServer, clientFilters, token) {
-    const idFunc = u.getPerspectiveNamespaceString;
-    return connectClientsNewFormat(sioServer, '/perspectives', idFunc, clientFilters, token);
-  },
-
-  connectBotsOldFormat(sioServer, clientFilters, token) {
-    const namespaceFunc = u.getBotsNamespaceString;
-    return connectClientsOldFormat(sioServer, namespaceFunc, clientFilters, token);
-  },
-
-  connectBotsNewFormat(sioServer, clientFilters, token) {
-    const idFunc = b => b.id;
-    return connectClientsNewFormat(sioServer, '/bots', idFunc, clientFilters, token);
-  },
-
-  connectRoomsOldFormat(sioServer, clientFilters, token) {
-    const namespaceFunc = u.getBotsNamespaceString;
-    return connectClientsOldFormat(sioServer, namespaceFunc, clientFilters, token);
-  },
-
-  connectRoomsNewFormat(sioServer, clientFilters, token) {
-    const idFunc = r => r.id;
-    return connectClientsNewFormat(sioServer, '/rooms', idFunc, clientFilters, token);
-  },
-
-  connectPerspectiveNewFormat(filters, token, opts) {
-    const idFunc = u.getPerspectiveNamespaceString;
-    return connectNewFormat('/perspectives', idFunc, filters, token, opts);
-  },
-
-  closeClients(clientMap) {
-    Object.values(clientMap).forEach((clients) =>
-      clients.forEach((client) =>
-        client.close()
-      )
-    );
-  },
-
-  mergeClients(clients1, clients2) {
-    const clients = {};
-    [...Object.keys(clients1), ...Object.keys(clients2)].forEach((filterName) => {
-      clients[filterName] = [...clients1[filterName], ...clients2[filterName]];
-    });
-    return clients;
-  },
-
-  toggleOverride(key, value) {
-    featureToggles._toggles[key] = value;
-  }, // toggleOverride
 };
-
-function openCloseByClient({ clientOpenClose }) {
-  return Promise.all(clientOpenClose.map(([openClose, client]) => {
-    if (openClose === true) {
-      const awaitConnect = awaitEvent(client, 'authenticated');
-      client.open();
-      return awaitConnect;
-    } else if (openClose === false) {
-      const awaitDisconnect = awaitEvent(client, 'disconnect');
-      client.close();
-      return awaitDisconnect.then(() => new Promise((resolve) => setTimeout(resolve, 50)));
-    }
-  }));
-}
-
-function connectClientsOldFormat(sioServer, namespaceFunc, clientFilters, token) {
-  const clients = {};
-  return Promise.map(Object.entries(clientFilters), ([name, filters]) => {
-    const namespace = namespaceFunc(filters);
-    const awaitConnection = awaitEvent(sioServer.of(namespace), 'connection');
-    if (!clients[name]) clients[name] = [];
-    clients[name].push(connectOldFormat(namespace, token));
-    return awaitConnection;
-  })
-  .then(() => clients);
-}
-
-function connectClientsNewFormat(sioServer, nsp, idFunc, clientFilters, token) {
-  const namespace = sioServer.of(nsp);
-  const clientCount = Object.keys(clientFilters).length;
-  const awaitConnections = awaitMultiple(namespace, 'connection', clientCount);
-  const clients = {};
-  Object.entries(clientFilters).map(([name, filters]) => {
-    if (!clients[name]) clients[name] = [];
-    clients[name].push(connectNewFormat(nsp, idFunc, filters, token));
-  });
-  return awaitConnections.then(() => clients);
-}
-
-function connectOldFormat(namespace, token) {
-  const options = {
-    transports: ['websocket'],
-    query: {
-      t: token,
-    },
-  };
-
-  return sioClient(`http://localhost:3000${namespace}`, options);
-}
-
-function connectNewFormat(namespace, idFunc, filters, token, opts) {
-  const options = {
-    query: {
-      id: idFunc(filters),
-    },
-    transports: ['websocket'],
-    ...opts,
-  };
-
-  return sioClient(`http://localhost:3000${namespace}`, options)
-  .on('connect', function() {
-    this.emit('auth', token);
-  });
-}
 
 function emitAndExpectByClient({ sioServer, eventType, eventExpectations, clientExpectations }) {
   const eventExpectationsNone = eventExpectations.map(([expected, samp]) => [null, samp]);
@@ -428,7 +282,7 @@ function expectEvents(eventType, clientExpectations, clients, expectOverrides=[]
 function expectEvent(eventType, expected, client, clientName) {
   const awaitPromise = awaitEvent(client, eventType)
   .then(() => clientName)
-  .timeout(20)
+  .timeout(100)
   .catch((err) => {
     err.message += ': ' + clientName;
     return Promise.reject(err);
@@ -446,80 +300,3 @@ function awaitEvent(target, eventName) {
     target.once(eventName, resolve)
   )
 }
-
-function awaitMultiple(target, eventName, x) {
-  let eventCount = 0;
-  return new Promise((resolve) => {
-    target.on(eventName, () => {
-      eventCount++;
-      if (eventCount >= x) {
-        target.removeAllListeners();
-        resolve();
-      }
-    });
-  });
-}
-
-const filterBuilders = {
-  rootSubject(rootSubject) {
-    return {
-      rootSubject,
-    };
-  },
-
-  subjectTagInclude(tags) {
-    return {
-      subjectTagFilterType: 'INCLUDE',
-      subjectTagFilter: tags,
-    };
-  },
-
-  subjectTagExclude(tags) {
-    return {
-      subjectTagFilterType: 'EXCLUDE',
-      subjectTagFilter: tags,
-    };
-  },
-
-  aspectTagInclude(tags) {
-    return {
-      aspectTagFilterType: 'INCLUDE',
-      aspectTagFilter: tags,
-    };
-  },
-
-  aspectTagExclude(tags) {
-    return {
-      aspectTagFilterType: 'EXCLUDE',
-      aspectTagFilter: tags,
-    };
-  },
-
-  aspectNameInclude(names) {
-    return {
-      aspectFilterType: 'INCLUDE',
-      aspectFilter: names,
-    };
-  },
-
-  aspectNameExclude(names) {
-    return {
-      aspectFilterType: 'EXCLUDE',
-      aspectFilter: names,
-    };
-  },
-
-  statusFilterInclude(statuses) {
-    return {
-      statusFilterType: 'INCLUDE',
-      statusFilter: statuses,
-    };
-  },
-
-  statusFilterExclude(statuses) {
-    return {
-      statusFilterType: 'EXCLUDE',
-      statusFilter: statuses,
-    };
-  },
-};
