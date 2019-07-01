@@ -34,8 +34,13 @@ const config = {
   ipWhitelistPath: 'v1/verify',
 };
 
-// TODO this seems wrong ... must review
-config.pubSubBots = config.pubSubBots && pe[config.pubSubBots] && [pe[config.pubSubBots]] || [];
+/*
+ * Env var REDIS_PUBSUB_BOTS currently only supports a single Redis url.
+ * TODO: update to do same as for perspectives to support multiple redis
+ *       instances.
+ */
+config.pubSubBots = (config.pubSubBots && pe[config.pubSubBots]) ?
+  [pe[config.pubSubBots]] : [];
 
 /*
  * Env var REDIS_PUBSUB_PERSPECTIVES should have a comma-separated list of

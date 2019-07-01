@@ -169,7 +169,7 @@ describe('test/pubSubStats.js >', () => {
 
       return new Promise((resolve) => {
         let count = 0;
-        subClients[0].on('message', () =>
+        subClients.perspectives[0].on('message', () =>
           count++ && count === 7 && resolve(count)
         );
       })
