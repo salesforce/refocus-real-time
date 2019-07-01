@@ -23,6 +23,9 @@ env:
   global:
     - NODE_ENV=build
 
+services:
+  - redis-server
+
 script:
   - travis_retry npm test
 
