@@ -38,7 +38,7 @@ describe('tests/subscriberInit.js >', () => {
       uncache('../conf/config');
       uncache('../src/subscriberInit');
       process.env.REDIS_PUBSUB_PERSPECTIVES = 'REDIS_URL';
-      if (process.env.hasOwnProperty(REDIS_URL)) {
+      if (process.env.hasOwnProperty('REDIS_URL')) {
         hasOwnRedisUrl = true;
       } else {
         process.env.REDIS_URL = '//127.0.0.1:6379';
@@ -91,7 +91,7 @@ describe('tests/subscriberInit.js >', () => {
       uncache('../conf/config');
       uncache('../src/subscriberInit');
       process.env.REDIS_PUBSUB_BOTS = 'REDIS_URL';
-      if (process.env.hasOwnProperty(REDIS_URL)) {
+      if (process.env.hasOwnProperty('REDIS_URL')) {
         hasOwnRedisUrl = true;
       } else {
         process.env.REDIS_URL = '//127.0.0.1:6379';
