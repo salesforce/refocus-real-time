@@ -17,18 +17,20 @@ const redis = require('redis');
 const expect = require('chai').expect;
 const uncache = require('./uncache');
 
-console.log(process.env);
-
 const bluebird = require('bluebird');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
 
 const publisher = redis.createClient('//127.0.0.1:6379');
 
-describe.skip('tests/subscriberInit.js >', () => {
+describe('tests/subscriberInit.js >', () => {
   after(() => publisher.quit());
 
+  /*
+   * NOTE: Assume there is a REDIS_URL env var
+   */
   describe('perspectives', () => {
+    let hasOwnRedisUrl = false;
     let conf;
     let sub;
 
@@ -36,7 +38,12 @@ describe.skip('tests/subscriberInit.js >', () => {
       uncache('../conf/config');
       uncache('../src/subscriberInit');
       process.env.REDIS_PUBSUB_PERSPECTIVES = 'REDIS_URL';
-      process.env.REDIS_URL = '//127.0.0.1:6379';
+      if (process.env.hasOwnProperty(REDIS_URL)) {
+        hasOwnRedisUrl = true;
+      } else {
+        process.env.REDIS_URL = '//127.0.0.1:6379';
+      }
+
       conf = require('../conf/config');
       sub = require('../src/subscriberInit');
     });
@@ -45,8 +52,10 @@ describe.skip('tests/subscriberInit.js >', () => {
       uncache('../conf/config');
       uncache('../src/subscriberInit');
       delete process.env.REDIS_PUBSUB_PERSPECTIVES;
-      delete process.env.REDIS_URL;
       sub.cleanup();
+      if (!hasOwnRedisUrl) {
+        delete process.env.REDIS_URL;
+      }
     });
 
     it('OK', () => {
@@ -82,7 +91,12 @@ describe.skip('tests/subscriberInit.js >', () => {
       uncache('../conf/config');
       uncache('../src/subscriberInit');
       process.env.REDIS_PUBSUB_BOTS = 'REDIS_URL';
-      process.env.REDIS_URL = '//127.0.0.1:6379';
+      if (process.env.hasOwnProperty(REDIS_URL)) {
+        hasOwnRedisUrl = true;
+      } else {
+        process.env.REDIS_URL = '//127.0.0.1:6379';
+      }
+
       conf = require('../conf/config');
       sub = require('../src/subscriberInit');
     });
@@ -94,6 +108,9 @@ describe.skip('tests/subscriberInit.js >', () => {
       delete process.env.REDIS_URL;
       publisher.quit();
       sub.cleanup();
+      if (!hasOwnRedisUrl) {
+        delete process.env.REDIS_URL;
+      }
     });
 
     it('OK', () => {
