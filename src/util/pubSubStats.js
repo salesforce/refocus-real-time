@@ -54,7 +54,7 @@ function trackSubscribe(evt, obj) {
     nameFromObj = obj.new.name;
     elapsed = now - new Date(obj.new.updatedAt);
   } else {
-    console.log('Missing updatedAt: ' + JSON.stringify(obj));
+    console.error('Missing updatedAt: ' + JSON.stringify(obj));
   }
 
   if (elapsed > 2000) {
