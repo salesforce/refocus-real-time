@@ -1,5 +1,7 @@
 # refocus-real-time
 
+[![Coverage Status](https://coveralls.io/repos/github/salesforce/refocus-real-time/badge.svg)](https://coveralls.io/github/salesforce/refocus-real-time)
+
 ##### Configure to push to heroku:
 ```
 heroku git:remote -a rf-rt-spike
