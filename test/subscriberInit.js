@@ -25,7 +25,7 @@ bluebird.promisifyAll(redis.Multi.prototype);
 
 const publisher = redis.createClient('//127.0.0.1:6379');
 
-describe('tests/subscriberInit.js >', () => {
+describe.skip('tests/subscriberInit.js >', () => {
   after(() => publisher.quit());
 
   describe('perspectives', () => {
@@ -65,7 +65,7 @@ describe('tests/subscriberInit.js >', () => {
 
       for (let i = 0; i < 10; i++) {
         publisher.publish(conf.perspectiveChannel,
-          JSON.stringify({ HelloPerspective: i }));
+          JSON.stringify({HelloPerspective: i}));
       }
 
       setTimeout(() => {
@@ -111,7 +111,7 @@ describe('tests/subscriberInit.js >', () => {
       expect(clients.perspectives.length).to.eql(0);
 
       for (let i = 0; i < 10; i++) {
-        publisher.publish(conf.botChannel, JSON.stringify({ HelloBot: i }));
+        publisher.publish(conf.botChannel, JSON.stringify({HelloBot: i}));
       }
 
       setTimeout(() => {
@@ -119,5 +119,4 @@ describe('tests/subscriberInit.js >', () => {
       }, 40);
     });
   });
-
 });
