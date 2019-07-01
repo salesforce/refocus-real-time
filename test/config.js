@@ -15,6 +15,8 @@
 const expect = require('chai').expect;
 const uncache = require('./uncache');
 
+console.log(process.env);
+
 describe('config >', () => {
   after(() => uncache('../conf/config'));
 

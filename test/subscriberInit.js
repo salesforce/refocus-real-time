@@ -17,6 +17,8 @@ const redis = require('redis');
 const expect = require('chai').expect;
 const uncache = require('./uncache');
 
+console.log(process.env);
+
 const bluebird = require('bluebird');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
