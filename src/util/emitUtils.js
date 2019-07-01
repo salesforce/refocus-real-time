@@ -14,7 +14,7 @@
 const debug = require('debug')('refocus-real-time:emitter');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
-const conf = require('../conf/config');
+const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
 

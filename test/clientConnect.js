@@ -19,7 +19,7 @@ const nock = require('nock');
 const conf = require('../conf/config');
 const connectUtil = require('./util/connectUtil');
 const testUtil = require('./util/testUtil');
-const utils = require('../util/emitUtils');
+const utils = require('../src/util/emitUtils');
 
 describe('test/clientConnect.js >', () => {
   let token;

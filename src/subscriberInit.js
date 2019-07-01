@@ -15,8 +15,8 @@ const debug = require('debug')('refocus-real-time:subscriber');
 const redis = require('redis');
 const featureToggles = require('feature-toggles');
 const conf = require('../conf/config');
-const emitUtils = require('../util/emitUtils');
-const pubSubStats = require('../util/pubSubStats');
+const emitUtils = require('./util/emitUtils');
+const pubSubStats = require('./util/pubSubStats');
 const emitter = require('./emitter');
 
 let interval;
