@@ -68,7 +68,7 @@ describe('tests/subscriberInit.js >', () => {
       clients.perspectives[0].on('message', (ch, msg) => counter[ch].push(msg));
       expect(clients.perspectives.length).to.eql(1);
       const c0 = clients.perspectives[0];
-      expect(c0).to.have.property('address', '127.0.0.1:6379');
+      expect(c0).to.have.property('address');
 
       expect(clients.bots.length).to.eql(0);
 
@@ -84,6 +84,7 @@ describe('tests/subscriberInit.js >', () => {
   });
 
   describe('bots', () => {
+    let hasOwnRedisUrl = false;
     let conf;
     let sub;
 
@@ -123,7 +124,7 @@ describe('tests/subscriberInit.js >', () => {
       clients.bots[0].on('message', (ch, msg) => counter[ch].push(msg));
       expect(clients.bots.length).to.eql(1);
       const c0 = clients.bots[0];
-      expect(c0).to.have.property('address', '127.0.0.1:6379');
+      expect(c0).to.have.property('address');
 
       expect(clients.perspectives.length).to.eql(0);
 
