@@ -22,12 +22,17 @@ describe('config >', () => {
     describe('No REDIS_PUBSUB_PERSPECTIVES >', () => {
       beforeEach(() => uncache('../conf/config'));
 
+      afterEach(() => {
+        delete process.env.REDIS_PUBSUB_PERSPECTIVES;
+      });
+
       it('not defined', () => {
         const config = require('../conf/config');
         expect(config.pubSubPerspectives).to.deep.eql([]);
       });
 
       it('empty string', () => {
+        process.env.REDIS_PUBSUB_PERSPECTIVES = '';
         const config = require('../conf/config');
         expect(config.pubSubPerspectives).to.deep.eql([]);
       });
@@ -50,7 +55,7 @@ describe('config >', () => {
         process.env.REDIS_PUBSUB_PERSPECTIVES = 'SOMETHING';
         process.env.SOMETHING = 'abcdefg';
         const config = require('../conf/config');
-        expect(config.pubSubPerspectives).to.deep.eql([process.env.SOMETHING]);
+        expect(config.pubSubPerspectives).to.deep.eql(['abcdefg']);
       });
     });
 
@@ -91,12 +96,17 @@ describe('config >', () => {
     describe('No REDIS_PUBSUB_BOTS >', () => {
       beforeEach(() => uncache('../conf/config'));
 
+      afterEach(() => {
+        delete process.env.REDIS_PUBSUB_PERSPECTIVES;
+      });
+
       it('not defined', () => {
         const config = require('../conf/config');
         expect(config.pubSubBots).to.deep.eql([]);
       });
 
       it('empty string', () => {
+        process.env.REDIS_PUBSUB_PERSPECTIVES = '';
         const config = require('../conf/config');
         expect(config.pubSubBots).to.deep.eql([]);
       });
@@ -130,6 +140,5 @@ describe('config >', () => {
         expect(config.pubSubBots).to.deep.eql([]);
       });
     });
-
   });
 });
