@@ -78,7 +78,7 @@ describe('config >', () => {
         process.env.REDIS_PUBSUB_PERSPECTIVES = 'SOMETHING, THING2';
         process.env.SOMETHING = 'abcdefg';
         const config = require('../conf/config');
-        expect(config.pubSubPerspectives).to.deep.eql([process.env.SOMETHING]);
+        expect(config.pubSubPerspectives).to.deep.eql(['abcdefg']);
       });
 
       it('all have corresponding env var', () => {
@@ -87,7 +87,7 @@ describe('config >', () => {
         process.env.THING2 = 'hijklmnop';
         const config = require('../conf/config');
         expect(config.pubSubPerspectives)
-          .to.deep.eql([process.env.SOMETHING, process.env.THING2]);
+          .to.deep.eql(['abcdefg', 'hijklmnop']);
       });
     });
   });
@@ -129,7 +129,7 @@ describe('config >', () => {
         process.env.REDIS_PUBSUB_BOTS = 'SOMETHING';
         process.env.SOMETHING = 'abcdefg';
         const config = require('../conf/config');
-        expect(config.pubSubBots).to.deep.eql([process.env.SOMETHING]);
+        expect(config.pubSubBots).to.deep.eql(['abcdefg']);
       });
 
       it('no support for multiple redis instances at this time', () => {
