@@ -26,16 +26,26 @@ const filters = [
 ];
 const botAbsolutePath = '/Bots';
 
+const ObjectType = {
+  Aspect: 'Aspect',
+  Sample: 'Sample',
+  Subject: 'Subject',
+};
+
 /**
- * A function to see if an object is a subject object or not. It returns true
- * if an object passed has 'parentAbsolutePath' as one of its property.
+ * A function to see if an object is a subject/aspect/sample. It returns
+ * "Subject" if an object passed has 'parentAbsolutePath' as one of its
+ * properties, "Aspect" if has "timeout" attribute, otherwise assumes it is
+ * Sample.
+ *
  * @param  {Object}  obj - An object instance
- * @returns {Boolean} - returns true if the object has the property
- * "parentAbsolutePath"
+ * @returns {String} - returns the object type
  */
-function isThisSubject(obj) {
-  return obj.hasOwnProperty('parentAbsolutePath');
-}
+function whatAmI(obj) {
+  if (obj.hasOwnProperty('parentAbsolutePath')) return ObjectType.Subject;
+  if (obj.hasOwnProperty('timeout')) return ObjectType.Aspect;
+  return ObjectType.Sample;
+} // whatAmI
 
 /**
  * Returns true if at least one element of the array is present in the set.
@@ -128,9 +138,23 @@ function perspectiveEmit(nspComponents, obj) {
    * If the obj is a subject, just apply the subjectTagFilter and return the
    * result.
    */
-  if (isThisSubject(obj)) return applyFilter(subjectTagFilter, obj.tags);
+  const objectType = whatAmI(obj);
+  if (objectType === ObjectType.Subject) {
+    return applyFilter(subjectTagFilter, obj.tags);
+  }
 
-  // Otherwise it's a sample, so apply all the filters and return the result.
+  /*
+   * If the obj is an aspect, apply the aspect name filter and aspect tag
+   * filter and return the result.
+   */
+  if (objectType === ObjectType.Aspect) {
+    return applyFilter(aspectFilter, obj.aspect.name) &&
+      applyFilter(aspectTagFilter, obj.tags);
+  }
+
+  /*
+   * Otherwise we assume it is a sample.
+   */
   return applyFilter(aspectFilter, obj.aspect.name) &&
     applyFilter(subjectTagFilter, obj.subject.tags) &&
     applyFilter(aspectTagFilter, obj.aspect.tags) &&
