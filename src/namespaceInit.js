@@ -46,4 +46,6 @@ module.exports = (io) => {
       );
     });
   }
+
+  return Promise.resolve();
 };
