@@ -132,7 +132,7 @@ describe('test/pubSubStats.js >', () => {
       testUtil.toggleOverride('enablePubSubStatsLogs', true);
 
       pubClient = redis.createClient(redisUrl);
-      io = require('socket.io')(conf.port);
+      io = require('socket.io')(3000);
       subClients = subscriberInit.init(io, processName);
     });
 
