@@ -28,8 +28,18 @@ function start(clusterProcessId = 0) {
   .then(() => subscriberInit.init(io, processName));
 }
 
+function startWithKafkaLogging() {
+  initKafkaLoggingProducer().then(() => {
+    start();
+  }).catch((err) => {
+    logger.error(err);
+    // eslint-disable-next-line no-magic-numbers
+    process.exit(1); // eslint-disable-line no-process-exit
+  });
+}
+
 if (conf.isProd) {
-  throng(conf.webConcurrency, start);
+  throng(conf.webConcurrency, startWithKafkaLogging);
 } else {
-  start();
+  startWithKafkaLogging();
 }

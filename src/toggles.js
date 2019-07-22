@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, salesforce.com, inc.
+ * Copyright (c) 2016, salesforce.com, inc.
  * All rights reserved.
  * Licensed under the BSD 3-Clause license.
  * For full license text, see LICENSE.txt file in the repo root or
@@ -7,61 +7,20 @@
  */
 
 /**
- * conf/config.js
+ * /config/toggles.js
  *
- * Configuration Settings
+ * Configure feature toggles.
+ *
+ * Usage: wherever you need to check whether a feature is enabled, just
+ * add require('feature-toggles') to the top of the module then use
+ * featureToggles.isFeatureEnabled('MY_FEATURE_NAME') or
+ * featureToggles.isFeatureEnabled('MY_FEATURE_NAME', 'myarg', 'anotherarg').
+ * (All the args after the feature name are passed to the function if the
+ * feature is defined using a function.)
  */
 'use strict'; // eslint-disable-line strict
 const featureToggles = require('feature-toggles');
-const ms = require('ms');
-const pe = process.env;
-
-const config = {
-  apiUrl: pe.REFOCUS_API_URL,
-  apiToken: pe.REFOCUS_API_TOKEN,
-  authTimeout: pe.TOKEN_AUTH_TIMEOUT || 5000,
-  dyno: pe.DYNO || null,
-  ipWhitelistService: pe.IP_WHITELIST_SERVICE || '',
-  port: pe.PORT || 3000,
-  pubSubBots: pe.REDIS_PUBSUB_BOTS || '',
-  pubSubPerspectives: pe.REDIS_PUBSUB_PERSPECTIVES || '',
-  pubSubStatsLoggingInterval: ms(pe.PUB_SUB_STATS_LOGGING_INTERVAL || '1m'),
-  secret: pe.SECRET,
-  webConcurrency: pe.WEB_CONCURRENCY || 1,
-  isProd: pe.NODE_ENV === 'production',
-  perspectiveChannel: 'focus',
-  botChannel: 'imc',
-  ipWhitelistPath: 'v1/verify',
-};
-
-config.pubSubBots = config.pubSubBots && pe[config.pubSubBots] && [pe[config.pubSubBots]] || [];
-config.pubSubPerspectives =
-  config.pubSubPerspectives
-  .split(',')
-  .map((r) => r.trim())
-  .filter((r) => pe[r])
-  .map((r) => pe[r]);
-
-const toggles = {
-  // use old socket.io namespace format
-  useOldNamespaceFormat: environmentVariableTrue(pe, 'USE_OLD_NAMESPACE_FORMAT'),
-
-  // use new socket.io namespace/room format
-  useNewNamespaceFormat: environmentVariableTrue(pe, 'USE_NEW_NAMESPACE_FORMAT'),
-
-  // use new socket.io namespace/room format
-  enablePubSubStatsLogs: environmentVariableTrue(pe, 'ENABLE_PUBSUB_STATS_LOGS'),
-
-  // Toggle to turn on kafkaLogging
-  kafkaLogging: environmentVariableTrue(pe, 'KAFKA_LOGGING'),
-
-  // Toggle to turn on LocalLogging
-  localLogging: !environmentVariableFalse(pe, 'LOCAL_LOGGING'),
-}; // shortTermToggles
-
-featureToggles.load(toggles);
-
-module.exports = config;
+const pe = process.env; // eslint-disable-line no-process-env
 
 /**
  * Return boolean true if the named environment variable is boolean true or
@@ -95,4 +54,27 @@ function environmentVariableFalse(processEnv, environmentVariableName) {
   const x = processEnv[environmentVariableName];
   return typeof x !== 'undefined' && x !== null &&
     x.toString().toLowerCase() === 'false';
-} // environmentVariableFalse
+} // environmentVariableTrue
+
+/*
+ * longTermToggles - add a new toggle here if you expect it to be around
+ * long-term.
+ *
+ * Defining a toggle in either "shortTermToggles" or "longTermToggles" has no
+ * bearing on how the toggle behaves--it is purely a way for us keep track of
+ * our *intention* for a particular feature toggle. It should help us keep
+ * things from getting out of hand and keeping tons of dead unused code around.
+ */
+const toggles = {
+
+  // Toggle to turn on Kafka Logging
+  
+
+}; // longTermToggles
+
+featureToggles.load(Object.assign({}, toggles));
+
+module.exports = {
+  environmentVariableTrue, // exporting to make it easy to test
+  environmentVariableFalse, // exporting for test only
+};
