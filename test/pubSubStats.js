@@ -15,7 +15,7 @@ const stdout = require('test-console').stdout;
 const redis = require('redis');
 const Promise = require('bluebird');
 const subscriberInit = require('../src/subscriberInit');
-const pss = require('../util/pubSubStats');
+const pss = require('../src/util/pubSubStats');
 const conf = require('../conf/config');
 const testUtil = require('./util/testUtil');
 const globalKey = 'pubsubstats';
@@ -130,7 +130,6 @@ describe('test/pubSubStats.js >', () => {
       conf.pubSubPerspectives = [redisUrl];
       conf.pubSubStatsLoggingInterval = 50;
       testUtil.toggleOverride('enablePubSubStatsLogs', true);
-
       pubClient = redis.createClient(redisUrl);
       io = require('socket.io')(3000);
       subClients = subscriberInit.init(io, processName);
@@ -170,7 +169,7 @@ describe('test/pubSubStats.js >', () => {
 
       return new Promise((resolve) => {
         let count = 0;
-        subClients[0].on('message', () =>
+        subClients.perspectives[0].on('message', () =>
           count++ && count === 7 && resolve(count)
         );
       })
@@ -181,6 +180,7 @@ describe('test/pubSubStats.js >', () => {
         expect(inspect.output[0]).to.match(updRe);
         expect(inspect.output[1]).to.match(addRe);
         expect(inspect.output[2]).to.match(delRe);
+        return true;
       });
     });
   });
