@@ -10,10 +10,7 @@
  * /util/pubSubStats.js
  */
 const debug = require('debug')('refocus:pubsub:elapsed');
-const winston = require('winston');
-const logger = new (winston.Logger)({
-  transports: [new (winston.transports.Console)()],
-});
+const logger = require('../src/logger');
 const globalKey = 'pubsubstats';
 
 /**
@@ -29,12 +26,12 @@ function trackSubscribe(evt, obj) {
 
   // Validate args
   if (!evt || typeof evt !== 'string' || evt.length === 0) {
-    console.error('pubSubStats.track error: evt must be non-empty string');
+    logger.error('pubSubStats.track error: evt must be non-empty string');
     return;
   }
 
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-    console.error('pubSubStats.track error: obj must be a non-array object');
+    logger.error('pubSubStats.track error: obj must be a non-array object');
     return;
   }
 
@@ -54,7 +51,7 @@ function trackSubscribe(evt, obj) {
     nameFromObj = obj.new.name;
     elapsed = now - new Date(obj.new.updatedAt);
   } else {
-    console.trace('Where is updatedAt? ' + JSON.stringify(obj));
+    logger.verbose('Where is updatedAt? ' + JSON.stringify(obj));
   }
 
   if (elapsed > 2000) {

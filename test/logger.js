@@ -16,6 +16,15 @@ const toggleOverride = (key, value) => {
 };
 
 describe('test/logger.js > ', () => {
+
+  const localLoggingValue = featureToggles.isFeatureEnabled('localLogging');
+  const kafkaLoggingValue = featureToggles.isFeatureEnabled('kafkaLogging');
+
+  afterEach(() => {
+    toggleOverride('localLogging', localLoggingValue);
+    toggleOverride('kafkaLogging', kafkaLoggingValue);
+  });
+
   it('Happy path:call producer with the right args,' +
   'call the init function and send', () => {
     toggleOverride('kafkaLogging', true);
