@@ -10,7 +10,7 @@
  * /util/pubSubStats.js
  */
 const debug = require('debug')('refocus:pubsub:elapsed');
-const logger = require('../src/logger');
+const logger = require('../logger');
 const globalKey = 'pubsubstats';
 
 /**
