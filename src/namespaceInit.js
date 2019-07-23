@@ -15,7 +15,7 @@ const debug = require('debug')('refocus-real-time:namespaces');
 const req = require('superagent');
 const Promise = require('bluebird');
 const toggle = require('feature-toggles');
-const utils = require('../util/emitUtils');
+const utils = require('./util/emitUtils');
 const conf = require('../conf/config');
 
 module.exports = (io) => {
@@ -28,24 +28,10 @@ module.exports = (io) => {
   }
 
   // OLD
-  if (toggle.isFeatureEnabled('useOldNamespaceFormat')) {
-    return Promise.join(
-      req
-        .get(`${conf.apiUrl}/v1/perspectives`)
-        .set('Authorization', conf.apiToken),
-      req
-        .get(`${conf.apiUrl}/v1/rooms?active=true`)
-        .set('Authorization', conf.apiToken),
-    )
-    .then(([perspectivesResponse, roomsResponse]) => {
-      perspectivesResponse.body.forEach((p) =>
-        utils.initializePerspectiveNamespace(p, io)
-      );
-      roomsResponse.body.forEach((r) =>
-        utils.initializeBotNamespace(r, io)
-      );
-    });
-  }
-
-  return Promise.resolve();
+  const useOldFormatPersp= toggle.isFeatureEnabled('useOldNamespaceFormatPersp');
+  const useOldFormatImc = toggle.isFeatureEnabled('useOldNamespaceFormatImc');
+  return Promise.join(
+    useOldFormatPersp && utils.initializePerspectiveNamespacesFromApi(io),
+    useOldFormatImc && utils.initializeBotNamespacesFromApi(io),
+  );
 };

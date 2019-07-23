@@ -15,12 +15,16 @@ const debug = require('debug')('refocus-real-time:subscriber');
 const redis = require('redis');
 const featureToggles = require('feature-toggles');
 const conf = require('../conf/config');
-const emitUtils = require('../util/emitUtils');
-const pubSubStats = require('../util/pubSubStats');
+const emitUtils = require('./util/emitUtils');
+const pubSubStats = require('./util/pubSubStats');
 const emitter = require('./emitter');
 
 let interval;
-const clients = [];
+const clients = {
+  bots: [],
+  perspectives: [],
+};
+
 module.exports = {
   init(io, processName) {
     if (featureToggles.isFeatureEnabled('enablePubSubStatsLogs')) {
@@ -30,21 +34,19 @@ module.exports = {
       );
     }
 
-    conf.pubSubPerspectives
-    .map((url) => redis.createClient(url))
-    .forEach((client) => {
-      clients.push(client);
-      client.subscribe(conf.perspectiveChannel);
-      client.on('message', emitMessage);
-    });
+    conf.pubSubPerspectives.map((url) => redis.createClient(url))
+      .forEach((client) => {
+        clients.perspectives.push(client);
+        client.subscribe(conf.perspectiveChannel);
+        client.on('message', emitMessage);
+      });
 
-    conf.pubSubBots
-    .map((url) => redis.createClient(url))
-    .forEach((client) => {
-      clients.push(client);
-      client.subscribe(conf.botChannel);
-      client.on('message', emitMessage);
-    });
+    conf.pubSubBots.map((url) => redis.createClient(url))
+      .forEach((client) => {
+        clients.bots.push(client);
+        client.subscribe(conf.botChannel);
+        client.on('message', emitMessage);
+      });
 
     return clients;
 
@@ -52,7 +54,7 @@ module.exports = {
       const obj = JSON.parse(messageAsString);
       const key = Object.keys(obj)[0];
       const parsedObj = emitUtils.parseObject(obj[key], key);
-      const { pubOpts } = parsedObj;
+      const {pubOpts} = parsedObj;
 
       // Deleting pubOpts from parsedObj before passing it to the emitter
       delete parsedObj.pubOpts;
@@ -71,7 +73,8 @@ module.exports = {
 
   cleanup() {
     clearInterval(interval);
-    clients.forEach(c => c.quit());
+    ['bots', 'perspectives']
+      .forEach((type) => clients[type].forEach(c => c.quit()));
   },
 };
 

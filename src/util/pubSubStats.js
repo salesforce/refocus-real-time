@@ -37,7 +37,7 @@ function trackSubscribe(evt, obj) {
 
   /*
    * Calculate the elapsed time. If we can't find an "updatedAt" attribute,
-   * treat the elapsed time as 0 but console.trace the object.
+   * treat the elapsed time as 0 but log the object.
    */
   let elapsed = 0;
   let updatedAtFromObj;
@@ -51,7 +51,7 @@ function trackSubscribe(evt, obj) {
     nameFromObj = obj.new.name;
     elapsed = now - new Date(obj.new.updatedAt);
   } else {
-    logger.verbose('Where is updatedAt? ' + JSON.stringify(obj));
+    logger.verbose('Missing updatedAt: ' + JSON.stringify(obj));
   }
 
   if (elapsed > 2000) {
