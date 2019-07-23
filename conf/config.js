@@ -58,12 +58,18 @@ config.pubSubPerspectives = config.pubSubPerspectives
 
 const toggles = {
   // use old socket.io namespace format
-  useOldNamespaceFormat: environmentVariableTrue(pe, 'USE_OLD_NAMESPACE_FORMAT'),
+  useOldNamespaceFormatPersp: environmentVariableTrue(pe, 'USE_OLD_NAMESPACE_FORMAT_PERSPECTIVES'),
+
+  // use old socket.io namespace format for IMC
+  useOldNamespaceFormatImc: environmentVariableTrue(pe, 'USE_OLD_NAMESPACE_FORMAT_IMC'),
 
   // use new socket.io namespace/room format
   useNewNamespaceFormat: environmentVariableTrue(pe, 'USE_NEW_NAMESPACE_FORMAT'),
 
-  // use new socket.io namespace/room format
+  // use new socket.io namespace/room format for IMC
+  useNewNamespaceFormatImc: environmentVariableTrue(pe, 'USE_NEW_NAMESPACE_FORMAT_IMC'),
+
+  // enable logging pubsub stats
   enablePubSubStatsLogs: environmentVariableTrue(pe, 'ENABLE_PUBSUB_STATS_LOGS'),
 }; // shortTermToggles
 
