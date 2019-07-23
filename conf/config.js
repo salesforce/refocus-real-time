@@ -35,9 +35,22 @@ const config = {
   ipWhitelistPath: 'v1/verify',
 };
 
-config.pubSubBots = config.pubSubBots && pe[config.pubSubBots] && [pe[config.pubSubBots]] || [];
-config.pubSubPerspectives =
-  config.pubSubPerspectives
+/*
+ * Env var REDIS_PUBSUB_BOTS currently only supports a single Redis url.
+ * TODO: update to do same as for perspectives to support multiple redis
+ *       instances.
+ */
+config.pubSubBots = (config.pubSubBots && pe[config.pubSubBots]) ?
+  [pe[config.pubSubBots]] : [];
+
+/*
+ * Env var REDIS_PUBSUB_PERSPECTIVES should have a comma-separated list of
+ * env var names where each one references the connection url of a Redis
+ * instance. Ignore if an entry in the comma-separated list has no
+ * corresponding env var, otherwise populate with array of Redis connection
+ * urls.
+ */
+config.pubSubPerspectives = config.pubSubPerspectives
   .split(',')
   .map((r) => r.trim())
   .filter((r) => pe[r])

@@ -20,7 +20,7 @@ const conf = require('../conf/config');
 const connectUtil = require('./util/connectUtil');
 const emitUtil = require('./util/emitUtil');
 const testUtil = require('./util/testUtil');
-const utils = require('../util/emitUtils');
+const utils = require('../src/util/emitUtils');
 
 describe('test/socketIOEmitter.js >', () => {
   let token;
