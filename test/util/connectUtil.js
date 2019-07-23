@@ -12,7 +12,7 @@
 'use strict'; // eslint-disable-line strict
 const Promise = require('bluebird');
 const sioClient = require('socket.io-client');
-const u = require('../../util/emitUtils');
+const u = require('../../src/util/emitUtils');
 
 module.exports = {
   buildFilters(filters) {

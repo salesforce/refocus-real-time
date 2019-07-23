@@ -13,7 +13,7 @@
  */
 const debug = require('debug')('refocus-real-time:emitter');
 const toggle = require('feature-toggles');
-const u = require('../util/emitUtils');
+const u = require('./util/emitUtils');
 const eventTypeIndex = 3;
 const initEvent = {
   bot: 'refocus.internal.realtime.bot.namespace.initialize',

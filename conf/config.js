@@ -16,27 +16,41 @@ const featureToggles = require('feature-toggles');
 const ms = require('ms');
 const pe = process.env;
 
+const isProd = pe.NODE_ENV === 'production';
 const config = {
   apiUrl: pe.REFOCUS_API_URL,
   apiToken: pe.REFOCUS_API_TOKEN,
   authTimeout: pe.TOKEN_AUTH_TIMEOUT || 5000,
   dyno: pe.DYNO || null,
   ipWhitelistService: pe.IP_WHITELIST_SERVICE || '',
-  port: pe.PORT || 3000,
+  port: pe.PORT || isProd ? 443 : 3000,
   pubSubBots: pe.REDIS_PUBSUB_BOTS || '',
   pubSubPerspectives: pe.REDIS_PUBSUB_PERSPECTIVES || '',
   pubSubStatsLoggingInterval: ms(pe.PUB_SUB_STATS_LOGGING_INTERVAL || '1m'),
   secret: pe.SECRET,
   webConcurrency: pe.WEB_CONCURRENCY || 1,
-  isProd: pe.NODE_ENV === 'production',
+  isProd,
   perspectiveChannel: 'focus',
   botChannel: 'imc',
   ipWhitelistPath: 'v1/verify',
 };
 
-config.pubSubBots = config.pubSubBots && pe[config.pubSubBots] && [pe[config.pubSubBots]] || [];
-config.pubSubPerspectives =
-  config.pubSubPerspectives
+/*
+ * Env var REDIS_PUBSUB_BOTS currently only supports a single Redis url.
+ * TODO: update to do same as for perspectives to support multiple redis
+ *       instances.
+ */
+config.pubSubBots = (config.pubSubBots && pe[config.pubSubBots]) ?
+  [pe[config.pubSubBots]] : [];
+
+/*
+ * Env var REDIS_PUBSUB_PERSPECTIVES should have a comma-separated list of
+ * env var names where each one references the connection url of a Redis
+ * instance. Ignore if an entry in the comma-separated list has no
+ * corresponding env var, otherwise populate with array of Redis connection
+ * urls.
+ */
+config.pubSubPerspectives = config.pubSubPerspectives
   .split(',')
   .map((r) => r.trim())
   .filter((r) => pe[r])

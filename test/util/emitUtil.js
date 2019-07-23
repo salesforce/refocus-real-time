@@ -17,7 +17,7 @@ chai.should();
 const Promise = require('bluebird');
 const sinon = require('sinon');
 const emitter = require('../../src/emitter');
-const u = require('../../util/emitUtils');
+const u = require('../../src/util/emitUtils');
 
 const sampleUpdate = 'refocus.internal.realtime.sample.update';
 const subjectUpdate = 'refocus.internal.realtime.subject.update';

@@ -15,7 +15,7 @@ const debug = require('debug')('refocus-real-time:namespaces');
 const req = require('superagent');
 const Promise = require('bluebird');
 const toggle = require('feature-toggles');
-const utils = require('../util/emitUtils');
+const utils = require('./util/emitUtils');
 const conf = require('../conf/config');
 
 module.exports = (io) => {
