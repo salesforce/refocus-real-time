@@ -33,8 +33,6 @@ function startWithKafkaLogging() {
     start();
   }).catch((err) => {
     logger.error(err);
-    // eslint-disable-next-line no-magic-numbers
-    process.exit(1); // eslint-disable-line no-process-exit
   });
 }
 

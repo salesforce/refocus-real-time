@@ -7,21 +7,23 @@
  */
 
 const KafkaProducer = require('no-kafka');
-const config = require('./kafkaLoggingConfig').getConfig();
+const kafkaConfig = require('./kafkaLoggingConfig').getConfig();
 const featureToggles = require('feature-toggles');
+const winston = require('winston');
 
 let producer;
 const initKafkaLoggingProducer = () => {
   if (featureToggles.isFeatureEnabled('kafkaLogging')) {
     producer = new KafkaProducer.Producer({
-      connectionString: config.connectionString,
+      connectionString: kafkaConfig.connectionString,
       ssl: {
-        cert: config.sslCert,
-        key: config.sslKey,
+        cert: kafkaConfig.sslCert,
+        key: kafkaConfig.sslKey,
       },
     });
     return producer.init().catch((err) => {
-      throw new Error(`Failed to initialized Kafka producer for logging, error: ${err}`);
+      throw new Error(`Failed to initialized Kafka producer for logging,
+      error: ${err}`);
     });
   }
 
@@ -29,37 +31,40 @@ const initKafkaLoggingProducer = () => {
 };
 
 const logFunc = {
-  info: console.log,
-  warn: console.warn,
-  error: console.error,
-  trace: console.log,
-  debug: console.log,
+  info: winston.info,
+  warn: winston.warn,
+  error: winston.error,
+  silly: winston.silly,
+  verbose: winston.verbose,
+  debug: winston.debug,
 };
 
-const writeLog = (value, key = 'info', topic = config.topic, callback = console.log) => {
-  const messageValue = {
+const writeLog = (message, key = 'info', topic = kafkaConfig.topic,
+    callback = winston.info) => {
+  const value = JSON.stringify({
     sendTimeStamp: new Date(),
-    value,
-  };
+    message,
+  });
   const logMessage = {
     topic,
     partition: 0,
     message: {
       key,
-      value: JSON.stringify(messageValue),
+      value,
     },
   };
   let promise;
   if (featureToggles.isFeatureEnabled('kafkaLogging')) {
-    promise = producer.send(logMessage).catch(err => {
-      callback(`Sending the log message to Kafka cluster failed, retrying, error: ${err}`);
+    promise = producer.send(logMessage).catch((err) => {
+      // eslint-disable-next-line callback-return
+      callback('Sending the log message to Kafka cluster failed,' +
+       `retrying, error: ${err}`);
       producer.send(logMessage); // retry again if failed
     });
   }
 
   if (featureToggles.isFeatureEnabled('localLogging')) {
-    callback('Local logging is turned on');
-    logFunc[logMessage.message.key](logMessage.message.value);
+    logFunc[logMessage.message.key](message);
   }
 
   return promise ? promise : Promise.resolve();
@@ -68,10 +73,12 @@ const writeLog = (value, key = 'info', topic = config.topic, callback = console.
 module.exports = {
   initKafkaLoggingProducer,
   writeLog,
-  error: (value) => writeLog(value, 'error'),
-  warn: (value) => writeLog(value, 'warn'),
-  info: (value) => writeLog(value, 'info'),
-  debug: (value) => writeLog(value, 'debug'),
-  verbose: (value) => writeLog(value, 'verbose'),
-  silly: (value) => writeLog(value, 'silly'),
+  error: (...args) => args.map((value) => writeLog(value, 'error')),
+  warn: (...args) => args.map((value) => writeLog(value, 'warn')),
+  info: (...args) => args.map((value) => writeLog(value, 'info')),
+  debug: (...args) => args.map((value) => writeLog(value, 'debug')),
+  verbose: (...args) => args.map((value) => writeLog(value, 'verbose')),
+  silly: (...args) => args.map((value) => writeLog(value, 'silly')),
+  on: (event, func) => logEmitter.on(event, func),
+  removeListener: (event, func) => logEmitter.removeListener(event, func),
 };
