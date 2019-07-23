@@ -28,16 +28,14 @@ function start(clusterProcessId = 0) {
   .then(() => subscriberInit.init(io, processName));
 }
 
-function startWithKafkaLogging() {
-  initKafkaLoggingProducer().then(() => {
-    start();
-  }).catch((err) => {
+function initApp() {
+  initKafkaLoggingProducer().then(start).catch((err) => {
     logger.error(err);
   });
 }
 
 if (conf.isProd) {
-  throng(conf.webConcurrency, startWithKafkaLogging);
+  throng(conf.webConcurrency, initApp);
 } else {
-  startWithKafkaLogging();
+  initApp();
 }
