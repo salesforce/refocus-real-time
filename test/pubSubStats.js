@@ -297,6 +297,7 @@ describe('test/pubSubStats.js >', () => {
       conf.apiToken = 'https://www.example.com';
       conf.authTimeout = 100;
       conf.port = 3000;
+      conf.dyno = 'd1';
       pubClient = redis.createClient(redisUrl);
       start();
     });
@@ -347,10 +348,10 @@ describe('test/pubSubStats.js >', () => {
       stop();
     });
 
-    const connRe = /info: activity=pubsub key=connections process=0 connectCount=3 connectedSockets=3 \n/;
-    const updRe = /info: activity=pubsub key=refocus.internal.realtime.sample.update process=0 subCount=4 subTime=\d+ emitCount=4 emitTime=\d+ clientCount=12 clientTime=\d+ \n/;
-    const addRe = /info: activity=pubsub key=refocus.internal.realtime.sample.add process=0 subCount=2 subTime=\d+ emitCount=2 emitTime=\d+ clientCount=6 clientTime=\d+ \n/;
-    const delRe = /info: activity=pubsub key=refocus.internal.realtime.sample.delete process=0 subCount=1 subTime=\d+ emitCount=1 emitTime=\d+ clientCount=3 clientTime=\d+ \n/;
+    const connRe = /info: activity=pubsub key=connections process=d1:0 connectCount=3 connectedSockets=3 \n/;
+    const updRe = /info: activity=pubsub key=refocus.internal.realtime.sample.update process=d1:0 subCount=4 subTime=\d+ emitCount=4 emitTime=\d+ clientCount=12 clientTime=\d+ \n/;
+    const addRe = /info: activity=pubsub key=refocus.internal.realtime.sample.add process=d1:0 subCount=2 subTime=\d+ emitCount=2 emitTime=\d+ clientCount=6 clientTime=\d+ \n/;
+    const delRe = /info: activity=pubsub key=refocus.internal.realtime.sample.delete process=d1:0 subCount=1 subTime=\d+ emitCount=1 emitTime=\d+ clientCount=3 clientTime=\d+ \n/;
 
     it('end-to-end', () => {
       const upd = {
