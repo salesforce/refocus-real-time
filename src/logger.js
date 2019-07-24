@@ -64,6 +64,7 @@ const writeLog = (message, key = 'info', topic = kafkaConfig.topic,
   }
 
   if (featureToggles.isFeatureEnabled('localLogging')) {
+    callback('Local logging is turned on');
     logFunc[logMessage.message.key](message);
   }
 

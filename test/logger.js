@@ -15,7 +15,7 @@ const toggleOverride = (key, value) => {
   featureToggles._toggles[key] = value;
 };
 
-describe('test/logger.js > ', () => {
+describe.only('test/logger.js > ', () => {
 
   const localLoggingValue = featureToggles.isFeatureEnabled('localLogging');
   const kafkaLoggingValue = featureToggles.isFeatureEnabled('kafkaLogging');
