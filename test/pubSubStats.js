@@ -393,11 +393,11 @@ describe('test/pubSubStats.js >', () => {
       return Promise.delay(conf.pubSubStatsLoggingInterval)
       .then(() => {
         expect(inspect.output).to.be.an('Array');
-        expect(inspect.output).to.have.lengthOf(4);
-        expect(inspect.output[0]).to.match(connRe);
-        expect(inspect.output[1]).to.match(updRe);
-        expect(inspect.output[2]).to.match(addRe);
-        expect(inspect.output[3]).to.match(delRe);
+        expect(inspect.output).to.have.lengthOf(8);
+        expect(inspect.output[1]).to.match(connRe);
+        expect(inspect.output[3]).to.match(updRe);
+        expect(inspect.output[5]).to.match(addRe);
+        expect(inspect.output[7]).to.match(delRe);
       });
     });
   });
