@@ -19,27 +19,20 @@ const emitUtils = require('./util/emitUtils');
 const pubSubStats = require('./util/pubSubStats');
 const emitter = require('./emitter');
 
-let interval;
 const clients = {
   bots: [],
   perspectives: [],
 };
 
 module.exports = {
-  init(io, processName) {
-    if (featureToggles.isFeatureEnabled('enablePubSubStatsLogs')) {
-      interval = setInterval(
-        () => pubSubStats.log(processName),
-        conf.pubSubStatsLoggingInterval
-      );
-    }
-
-    conf.pubSubPerspectives.map((url) => redis.createClient(url))
-      .forEach((client) => {
-        clients.perspectives.push(client);
-        client.subscribe(conf.perspectiveChannel);
-        client.on('message', emitMessage);
-      });
+  init(io) {
+    conf.pubSubPerspectives
+    .map((url) => redis.createClient(url))
+    .forEach((client) => {
+      clients.perspectives.push(client);
+      client.subscribe(conf.perspectiveChannel);
+      client.on('message', emitMessage);
+    });
 
     conf.pubSubBots.map((url) => redis.createClient(url))
       .forEach((client) => {
@@ -59,9 +52,7 @@ module.exports = {
       // Deleting pubOpts from parsedObj before passing it to the emitter
       delete parsedObj.pubOpts;
 
-      if (featureToggles.isFeatureEnabled('enablePubSubStatsLogs')) {
-        pubSubStats.trackSubscribe(key, parsedObj);
-      }
+      pubSubStats.trackSubscribe(key, parsedObj);
 
       /*
        * pass on the message received through the redis subscriber to the socket
@@ -72,7 +63,6 @@ module.exports = {
   },
 
   cleanup() {
-    clearInterval(interval);
     ['bots', 'perspectives']
       .forEach((type) => clients[type].forEach(c => c.quit()));
   },
