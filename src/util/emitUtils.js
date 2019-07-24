@@ -17,7 +17,7 @@ const Promise = require('bluebird');
 const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
-const pubSubStats = require('../util/pubSubStats');
+const pubSubStats = require('./pubSubStats');
 const toggle = require('feature-toggles');
 
 const filters = [

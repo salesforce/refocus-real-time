@@ -15,7 +15,7 @@ const toggle = require('feature-toggles');
 const conf = require('../conf/config');
 const namespaceInit = require('./namespaceInit');
 const subscriberInit = require('./subscriberInit');
-const pubSubStats = require('../util/pubSubStats');
+const pubSubStats = require('./util/pubSubStats');
 
 let io;
 let interval;
