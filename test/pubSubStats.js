@@ -291,7 +291,7 @@ describe('test/pubSubStats.js >', () => {
       inspect = stdout.inspect();
       delete global[globalKey];
       conf.pubSubPerspectives = [redisUrl];
-      conf.pubSubStatsLoggingInterval = 100;
+      conf.pubSubStatsLoggingInterval = 500;
       conf.secret = 'abcdefghijkl';
       conf.apiUrl = 'https://www.example.com';
       conf.apiToken = 'https://www.example.com';
