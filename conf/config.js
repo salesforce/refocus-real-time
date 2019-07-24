@@ -68,6 +68,9 @@ const toggles = {
 
   // use new socket.io namespace/room format for IMC
   useNewNamespaceFormatImc: environmentVariableTrue(pe, 'USE_NEW_NAMESPACE_FORMAT_IMC'),
+ 
+  // log subscribe stats
+  enableSubscribeStats: envVarIncludes(pe, 'ENABLE_STATS', 'subscribe'),
 
   // enable logging pubsub stats
   enablePubSubStatsLogs: environmentVariableTrue(pe, 'ENABLE_PUBSUB_STATS_LOGS'),
@@ -79,7 +82,16 @@ const toggles = {
   // We want the value of localLogging to be only turned off when the admin
   // explicitly sets to false
   localLogging: !environmentVariableFalse(pe, 'LOCAL_LOGGING'),
-}; // shortTermToggles
+
+  // log emit stats
+  enableEmitStats: envVarIncludes(pe, 'ENABLE_STATS', 'emit'),
+
+  // log client stats
+  enableClientStats: envVarIncludes(pe, 'ENABLE_STATS', 'client'),
+
+  // log connection stats
+  enableConnectionStats: envVarIncludes(pe, 'ENABLE_STATS', 'connection'),
+}; // toggles
 
 featureToggles.load(toggles);
 
@@ -118,3 +130,34 @@ function environmentVariableFalse(processEnv, environmentVariableName) {
   return typeof x !== 'undefined' && x !== null &&
     x.toString().toLowerCase() === 'false';
 } // environmentVariableFalse
+
+/**
+ * Return boolean true if the named environment variable contains a comma-
+ * delimited list of strings and one of those strings matches the test string
+ * (case-insensitive). If the env var === '*' then returns true for any test
+ * string.
+ *
+ * @param {Object} env - The node process environment. (Passing it into
+ *  this function instead of just getting a reference to it *inside* this
+ *  function makes the function easier to test.)
+ * @param {String} envVarName - The name of the environment var.
+ * @param {String} str - The test string.
+ * @returns {Boolean} true if the named environment variable is boolean true or
+ *  case-insensitive string 'true'.
+ */
+function envVarIncludes(env, envVarName, str) {
+  const val = env[envVarName];
+
+  /* str length < 1? False! */
+  if (str.length < 1) return false;
+
+  /* Not defined or null? False! */
+  if (typeof val === 'undefined' || !val) return false;
+
+  /* Wildcard "all"? True! */
+  if (val.toString() === '*') return true;
+
+  /* Array includes str? (Strip any leading/trailing spaces first. */
+  const arr = val.toString().toLowerCase().split(',').map((i) => i.trim());
+  return arr.includes(str.toLowerCase());
+} // envVarIncludes

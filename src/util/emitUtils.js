@@ -17,6 +17,8 @@ const Promise = require('bluebird');
 const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
+const pubSubStats = require('./pubSubStats');
+const toggle = require('feature-toggles');
 
 const filters = [
   'aspectFilter',
@@ -271,7 +273,14 @@ function initializePerspectiveNamespace(inst, io) {
       validateIp(socket),
       validateTokenOldFormat(socket),
     )
+    .then(() => {
+      pubSubStats.trackConnect();
+      socket.on('disconnect', () => {
+        pubSubStats.trackDisconnect();
+      });
+    })
     .catch((err) => {
+      pubSubStats.trackAuthError();
       socket.emit('auth error', err.message);
       socket.disconnect();
     })
@@ -325,7 +334,14 @@ function initializeBotNamespace(inst, io) {
       validateIp(socket),
       validateTokenOldFormat(socket),
     )
+    .then(() => {
+      pubSubStats.trackConnect();
+      socket.on('disconnect', () => {
+        pubSubStats.trackDisconnect();
+      });
+    })
     .catch((err) => {
+      pubSubStats.trackAuthError();
       socket.emit('auth error', err.message);
       socket.disconnect();
     })
@@ -352,6 +368,7 @@ function initializeNamespace(namespace, io) {
       socket.emit('authenticated');
     })
     .catch((err) => {
+      pubSubStats.trackAuthError();
       socket.emit('auth error', err.message);
       socket.disconnect();
     })
@@ -375,11 +392,13 @@ function addToRoom(socket) {
  */
 const connectedRooms = {};
 function trackConnectedRooms(socket) {
+  pubSubStats.trackConnect();
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
   connectedRooms[nsp.name].add(roomName);
 
   socket.on('disconnect', () => {
+    pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
     const roomIsActive = allSockets.some((socket) =>
       Object.keys(socket.rooms).includes(roomName)
@@ -408,10 +427,12 @@ function validateTokenNewFormat(socket) {
     token,
     jwtVerifyAsync(token, conf.secret),
   ))
-  .then(([token, { username, tokenname }]) =>
-    request.get(`${conf.apiUrl}/v1/users/${username}/tokens/${tokenname}`)
-           .set('Authorization', token)
-  )
+  .then(([token, { username, tokenname }]) => {
+    const path = (username === tokenname) ? `v1/users/${username}`
+                                          : `v1/users/${username}/tokens/${tokenname}`;
+    return request.get(`${conf.apiUrl}/${path}`)
+                  .set('Authorization', token);
+  })
   .timeout(conf.authTimeout);
 }
 
@@ -495,7 +516,28 @@ function emitToClients(io, nsp, rooms, key, obj) {
     rooms.forEach((room) =>
       namespace.to(room)
     );
-    namespace.emit(key, obj);
+    doEmit(namespace, key, obj);
+  }
+}
+
+/**
+ * Emit to the provided namespace, tracking stats if enabled.
+ * @param {Object}  nsp - the namespace to emit to
+ * @param {String}  key - event type
+ * @param {Object}  obj - event body
+ */
+function doEmit(nsp, key, obj) {
+  const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
+  pubSubStats.trackEmit(key, obj);
+  if (!toggle.isFeatureEnabled('enableClientStats')) {
+    nsp.emit(key, newObjectAsString);
+  } else {
+    Object.values(nsp.connected)
+    .forEach((socket) => {
+      socket.emit(key, newObjectAsString, (time) =>
+        pubSubStats.trackClient(key, obj, time)
+      );
+    });
   }
 }
 
@@ -522,7 +564,6 @@ function parseObject(messgObj, key) {
 
 module.exports = {
   getBotsNamespaceString,
-  getNewObjAsString,
   getPerspectiveNamespaceString,
   initializeBotNamespace,
   initializePerspectiveNamespace,
@@ -532,5 +573,6 @@ module.exports = {
   connectedRooms,
   shouldIEmitThisObj,
   emitToClients,
+  doEmit,
   parseObject,
 }; // exports
