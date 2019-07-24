@@ -296,6 +296,7 @@ describe('test/pubSubStats.js >', () => {
       conf.apiUrl = 'https://www.example.com';
       conf.apiToken = 'https://www.example.com';
       conf.authTimeout = 100;
+      conf.port = 3000;
       pubClient = redis.createClient(redisUrl);
       start();
     });
