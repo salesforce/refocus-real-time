@@ -72,9 +72,6 @@ const toggles = {
   // log subscribe stats
   enableSubscribeStats: envVarIncludes(pe, 'ENABLE_STATS', 'subscribe'),
 
-  // enable logging pubsub stats
-  enablePubSubStatsLogs: environmentVariableTrue(pe, 'ENABLE_PUBSUB_STATS_LOGS'),
-
   // Toggle to turn on kafkaLogging
   kafkaLogging: environmentVariableTrue(pe, 'KAFKA_LOGGING'),
 
