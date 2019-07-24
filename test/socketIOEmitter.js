@@ -20,7 +20,7 @@ const conf = require('../conf/config');
 const connectUtil = require('./util/connectUtil');
 const emitUtil = require('./util/emitUtil');
 const testUtil = require('./util/testUtil');
-const utils = require('../util/emitUtils');
+const utils = require('../src/util/emitUtils');
 
 describe('test/socketIOEmitter.js >', () => {
   let token;
@@ -196,7 +196,8 @@ describe('test/socketIOEmitter.js >', () => {
       let connectedClients;
 
       before(() => {
-        testUtil.toggleOverride('useOldNamespaceFormat', true);
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', true);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', true);
         testUtil.toggleOverride('useNewNamespaceFormat', false);
         sioServer = require('socket.io')(3000);
 
@@ -229,7 +230,8 @@ describe('test/socketIOEmitter.js >', () => {
       });
 
       after((done) => {
-        testUtil.toggleOverride('useOldNamespaceFormat', false);
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
         testUtil.toggleOverride('useNewNamespaceFormat', false);
         connectUtil.closeClients(connectedClients);
         sioServer.close(done);
@@ -243,7 +245,8 @@ describe('test/socketIOEmitter.js >', () => {
       let connectedClients;
 
       before(() => {
-        testUtil.toggleOverride('useOldNamespaceFormat', false);
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
         testUtil.toggleOverride('useNewNamespaceFormat', true);
         sioServer = require('socket.io')(3000);
         utils.initializeNamespace('/bots', sioServer);
@@ -267,7 +270,8 @@ describe('test/socketIOEmitter.js >', () => {
       });
 
       after((done) => {
-        testUtil.toggleOverride('useOldNamespaceFormat', false);
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
         testUtil.toggleOverride('useNewNamespaceFormat', false);
         connectUtil.closeClients(connectedClients);
         sioServer.close(done);
@@ -281,7 +285,8 @@ describe('test/socketIOEmitter.js >', () => {
       let connectedClients;
 
       before(() => {
-        testUtil.toggleOverride('useOldNamespaceFormat', true);
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', true);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', true);
         testUtil.toggleOverride('useNewNamespaceFormat', true);
         sioServer = require('socket.io')(3000);
 
@@ -329,7 +334,8 @@ describe('test/socketIOEmitter.js >', () => {
       });
 
       after((done) => {
-        testUtil.toggleOverride('useOldNamespaceFormat', false);
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
         testUtil.toggleOverride('useNewNamespaceFormat', false);
         connectUtil.closeClients(connectedClients);
         sioServer.close(done);
@@ -2178,14 +2184,16 @@ describe('test/socketIOEmitter.js >', () => {
     let sioServer;
     let clients;
     beforeEach(() => {
-      testUtil.toggleOverride('useOldNamespaceFormat', false);
+      testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+      testUtil.toggleOverride('useOldNamespaceFormatImc', false);
       testUtil.toggleOverride('useNewNamespaceFormat', true);
       sioServer = require('socket.io')(3000);
       utils.initializeNamespace('/perspectives', sioServer);
     });
 
     afterEach((done) => {
-      testUtil.toggleOverride('useOldNamespaceFormat', false);
+      testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+      testUtil.toggleOverride('useOldNamespaceFormatImc', false);
       testUtil.toggleOverride('useNewNamespaceFormat', false);
       clients.forEach((client) => client.close());
       sioServer.close(done);

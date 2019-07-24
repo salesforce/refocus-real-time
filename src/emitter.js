@@ -13,7 +13,7 @@
  */
 const debug = require('debug')('refocus-real-time:emitter');
 const toggle = require('feature-toggles');
-const u = require('../util/emitUtils');
+const u = require('./util/emitUtils');
 const eventTypeIndex = 3;
 const initEvent = {
   bot: 'refocus.internal.realtime.bot.namespace.initialize',
@@ -23,10 +23,10 @@ const initEvent = {
 module.exports = (io, key, obj, pubOpts) => {
   // newObjectAsString contains { key: {new: obj }}
   const newObjectAsString = u.getNewObjAsString(key, obj);
+  const eventType = key.split('.')[eventTypeIndex];
 
   // NEW
   if (toggle.isFeatureEnabled('useNewNamespaceFormat')) {
-    const eventType = key.split('.')[eventTypeIndex];
     if (eventType === 'subject' || eventType === 'sample') {
       const perspectives = Array.from(u.connectedRooms['/perspectives']).filter((roomName) =>
         u.shouldIEmitThisObj(roomName, obj)
@@ -46,14 +46,29 @@ module.exports = (io, key, obj, pubOpts) => {
   }
 
   // OLD
-  if (toggle.isFeatureEnabled('useOldNamespaceFormat')) {
-    // Initialize namespace if init event is sent for perspective or bot
+  // Initialize namespace if init event is sent for perspective
+  if (toggle.isFeatureEnabled('useOldNamespaceFormatPersp')) {
     if (key.startsWith(initEvent.perspective)) {
       u.initializePerspectiveNamespace(obj, io);
-    } else if (key.startsWith(initEvent.bot)) {
+    }
+  }
+
+  // OLD
+  // Initialize namespace if init event is sent for bot
+  if (toggle.isFeatureEnabled('useOldNamespaceFormatImc')) {
+    if (key.startsWith(initEvent.bot)) {
       u.initializeBotNamespace(obj, io);
     }
+  }
 
+  // OLD
+  let emitPersp = toggle.isFeatureEnabled('useOldNamespaceFormatPersp')
+                  && (eventType === 'subject' || eventType === 'sample');
+
+  let emitImc = toggle.isFeatureEnabled('useOldNamespaceFormatImc')
+                && (eventType === 'bot' || eventType === 'room');
+
+  if (emitPersp || emitImc) {
     /*
      * Socket.io does not expose any API to retrieve list of all the namespaces
      * which have been initialized. We use `Object.keys(io.nsps)` here, which
