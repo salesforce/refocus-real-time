@@ -110,9 +110,9 @@ describe('test/pubSubStats.js >', () => {
       const re1 = /info: activity=pubsub key=bye.world process=MyProcessName subCount=3 subTime=\d+ \n/; // jscs:ignore maximumLineLength
       const re2 = /info: activity=pubsub key=hello.world process=MyProcessName subCount=1 subTime=\d+ \n/; // jscs:ignore maximumLineLength
       expect(inspect.output).to.be.an('Array');
-      expect(inspect.output).to.have.lengthOf(2);
-      expect(inspect.output[0]).to.match(re1);
-      expect(inspect.output[1]).to.match(re2);
+      expect(inspect.output).to.have.lengthOf(4);
+      expect(inspect.output[1]).to.match(re1);
+      expect(inspect.output[3]).to.match(re2);
     });
   });
 
