@@ -14,7 +14,7 @@
 const debug = require('debug')('refocus-real-time:emitter');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
-const conf = require('../conf/config');
+const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
 
@@ -280,6 +280,40 @@ function initializePerspectiveNamespace(inst, io) {
 
 // OLD - remove along with namespace toggles
 /**
+ * Makes an api call to get all existing perspectives, and initializes
+ * namespaces based on the response.
+ * @param {Socket.io} io - The socketio's server side object
+ */
+function initializePerspectiveNamespacesFromApi(io) {
+  return req
+  .get(`${conf.apiUrl}/v1/perspectives`)
+  .set('Authorization', conf.apiToken)
+  .then((perspectives) =>
+    perspectives.body.forEach((p) =>
+      initializePerspectiveNamespace(p, io)
+    )
+  );
+}
+
+// OLD - remove along with namespace toggles
+/**
+ * Makes an api call to get all existing Imc rooms, and initializes
+ * namespaces based on the response.
+ * @param {Socket.io} io - The socketio's server side object
+ */
+function initializeBotNamespacesFromApi(io) {
+  return req
+  .get(`${conf.apiUrl}/v1/rooms?active=true`)
+  .set('Authorization', conf.apiToken)
+  .then((rooms) =>
+    rooms.body.forEach((r) =>
+      initializeBotNamespace(r, io)
+    )
+  );
+}
+
+// OLD - remove along with namespace toggles
+/**
  * Initializes a socketIO namespace based on the bot object.
  * @param {Object} inst - The perspective instance.
  * @param {Socket.io} io - The socketio's server side object
@@ -494,6 +528,8 @@ module.exports = {
   getPerspectiveNamespaceString,
   initializeBotNamespace,
   initializePerspectiveNamespace,
+  initializePerspectiveNamespacesFromApi,
+  initializeBotNamespacesFromApi,
   initializeNamespace,
   connectedRooms,
   shouldIEmitThisObj,
