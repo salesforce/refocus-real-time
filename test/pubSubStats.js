@@ -14,14 +14,35 @@ const expect = require('chai').expect;
 const stdout = require('test-console').stdout;
 const redis = require('redis');
 const Promise = require('bluebird');
+const jwt = require('jsonwebtoken');
+const nock = require('nock');
+const sioClient = require('socket.io-client');
 const subscriberInit = require('../src/subscriberInit');
 const pss = require('../src/util/pubSubStats');
 const conf = require('../conf/config');
+const utils = require('../src/util/emitUtils');
 const testUtil = require('./util/testUtil');
+const { start, stop } = require('../src/start');
 const globalKey = 'pubsubstats';
 
 describe('test/pubSubStats.js >', () => {
-  describe('track >', () => {
+  before(() => {
+    testUtil.toggleOverride('enableSubscribeStats', true);
+    testUtil.toggleOverride('enableEmitStats', true);
+    testUtil.toggleOverride('enableClientStats', true);
+    testUtil.toggleOverride('enableConnectionStats', true);
+    testUtil.toggleOverride('useNewNamespaceFormat', true);
+  });
+
+  after(() => {
+    testUtil.toggleOverride('enableSubscribeStats', false);
+    testUtil.toggleOverride('enableEmitStats', false);
+    testUtil.toggleOverride('enableClientStats', false);
+    testUtil.toggleOverride('enableConnectionStats', false);
+    testUtil.toggleOverride('useNewNamespaceFormat', false);
+  });
+
+  describe('trackSubscribe >', () => {
     describe('elapsed >', () => {
       beforeEach(() => (delete global[globalKey]));
       afterEach(() => (delete global[globalKey]));
@@ -88,6 +109,140 @@ describe('test/pubSubStats.js >', () => {
     });
   });
 
+  describe('trackEmit >', () => {
+    describe('elapsed >', () => {
+      beforeEach(() => (delete global[globalKey]));
+      afterEach(() => (delete global[globalKey]));
+
+      it('obj has "updatedAt"', () => {
+        pss.trackEmit('hello.world', { updatedAt: Date.now() - 1000 });
+        const g = global[globalKey];
+        expect(g).to.have.property('hello.world');
+        expect(g['hello.world']).to.have.property('emitCount', 1);
+        expect(g['hello.world'].emitTime).to.be.greaterThan(100);
+      });
+
+      it('obj has "new" with "updatedAt"', () => {
+        pss.trackEmit('hello.world', {
+          new: { updatedAt: Date.now() - 1000 },
+        });
+        const g = global[globalKey];
+        expect(g).to.have.property('hello.world');
+        expect(g['hello.world']).to.have.property('emitCount', 1);
+        expect(g['hello.world'].emitTime).to.be.greaterThan(100);
+      });
+
+      it('obj has "new" without "updatedAt"', () => {
+        pss.trackEmit('hello.world', {
+          new: { notUpdatedAt: Date.now() - 1000 },
+        });
+        const g = global[globalKey];
+        expect(g).to.have.property('hello.world');
+        expect(g['hello.world']).to.have.property('emitCount', 1);
+        expect(g['hello.world']).to.have.property('emitTime', 0);
+      });
+
+      it('no updatedAt', () => {
+        pss.trackEmit('hello.world', { hello: 'world' });
+        const g = global[globalKey];
+        expect(g).to.have.property('hello.world');
+        expect(g['hello.world']).to.have.property('emitCount', 1);
+        expect(g['hello.world']).to.have.property('emitTime', 0);
+      });
+    });
+
+    describe('pub/sub >', () => {
+      beforeEach(() => (delete global[globalKey]));
+      afterEach(() => (delete global[globalKey]));
+
+      it('pub and sub and multiple event types', () => {
+        pss.trackEmit('bye.world', { updatedAt: Date.now() - 1000 });
+        pss.trackEmit('bye.world', { updatedAt: Date.now() - 1000 });
+        pss.trackEmit('bye.world', { updatedAt: Date.now() - 1000 });
+        pss.trackEmit('hello.world', { updatedAt: Date.now() - 1 });
+
+        const g = global[globalKey];
+
+        expect(g).to.have.property('bye.world');
+        const bye = g['bye.world'];
+        expect(bye).to.have.property('emitCount', 3);
+        expect(bye).to.be.have.property('emitTime').to.be.greaterThan(1000);
+
+        expect(g).to.have.property('hello.world');
+        const hi = g['hello.world'];
+        expect(hi).to.have.property('emitCount', 1);
+        expect(hi).to.have.property('emitTime').to.be.lessThan(100);
+      });
+    });
+  });
+
+  describe('trackClient >', () => {
+    describe('elapsed >', () => {
+      beforeEach(() => (delete global[globalKey]));
+      afterEach(() => (delete global[globalKey]));
+
+      it('obj has "updatedAt"', () => {
+        pss.trackClient('hello.world', { updatedAt: Date.now() - 1000 }, Date.now());
+        const g = global[globalKey];
+        expect(g).to.have.property('hello.world');
+        expect(g['hello.world']).to.have.property('clientCount', 1);
+        expect(g['hello.world'].clientTime).to.be.greaterThan(100);
+      });
+
+      it('obj has "new" with "updatedAt"', () => {
+        pss.trackClient('hello.world', {
+          new: { updatedAt: Date.now() - 1000 },
+        }, Date.now());
+        const g = global[globalKey];
+        expect(g).to.have.property('hello.world');
+        expect(g['hello.world']).to.have.property('clientCount', 1);
+        expect(g['hello.world'].clientTime).to.be.greaterThan(100);
+      });
+
+      it('obj has "new" without "updatedAt"', () => {
+        pss.trackClient('hello.world', {
+          new: { notUpdatedAt: Date.now() - 1000 },
+        }, Date.now());
+        const g = global[globalKey];
+        expect(g).to.have.property('hello.world');
+        expect(g['hello.world']).to.have.property('clientCount', 1);
+        expect(g['hello.world']).to.have.property('clientTime', 0);
+      });
+
+      it('no updatedAt', () => {
+        pss.trackClient('hello.world', { hello: 'world' }, Date.now());
+        const g = global[globalKey];
+        expect(g).to.have.property('hello.world');
+        expect(g['hello.world']).to.have.property('clientCount', 1);
+        expect(g['hello.world']).to.have.property('clientTime', 0);
+      });
+    });
+
+    describe('pub/sub >', () => {
+      beforeEach(() => (delete global[globalKey]));
+      afterEach(() => (delete global[globalKey]));
+
+      it('pub and sub and multiple event types', () => {
+        pss.trackClient('bye.world', { updatedAt: Date.now() - 1000 }, Date.now());
+        pss.trackClient('bye.world', { updatedAt: Date.now() - 1000 }, Date.now());
+        pss.trackClient('bye.world', { updatedAt: Date.now() - 1000 }, Date.now());
+        pss.trackClient('hello.world', { updatedAt: Date.now() - 1 }, Date.now());
+
+        const g = global[globalKey];
+
+        expect(g).to.have.property('bye.world');
+        const bye = g['bye.world'];
+        expect(bye).to.have.property('clientCount', 3);
+        expect(bye).to.be.have.property('clientTime').to.be.greaterThan(1000);
+
+        expect(g).to.have.property('hello.world');
+        const hi = g['hello.world'];
+        expect(hi).to.have.property('clientCount', 1);
+        expect(hi).to.have.property('clientTime').to.be.lessThan(100);
+      });
+    });
+  });
+
   describe('log >', () => {
     let inspect;
 
@@ -98,6 +253,14 @@ describe('test/pubSubStats.js >', () => {
       pss.trackSubscribe('bye.world', { updatedAt: Date.now() - 1000 });
       pss.trackSubscribe('bye.world', { updatedAt: Date.now() - 1000 });
       pss.trackSubscribe('hello.world', { updatedAt: Date.now() - 1 });
+      pss.trackEmit('bye.world', { updatedAt: Date.now() - 1000 });
+      pss.trackEmit('bye.world', { updatedAt: Date.now() - 1000 });
+      pss.trackEmit('bye.world', { updatedAt: Date.now() - 1000 });
+      pss.trackEmit('hello.world', { updatedAt: Date.now() - 1 });
+      pss.trackClient('bye.world', { updatedAt: Date.now() - 1000 }, Date.now());
+      pss.trackClient('bye.world', { updatedAt: Date.now() - 1000 }, Date.now());
+      pss.trackClient('bye.world', { updatedAt: Date.now() - 1000 }, Date.now());
+      pss.trackClient('hello.world', { updatedAt: Date.now() - 1 }, Date.now());
       pss.log('MyProcessName');
     });
 
@@ -106,9 +269,9 @@ describe('test/pubSubStats.js >', () => {
       inspect.restore();
     });
 
-    it('ok', () => {
-      const re1 = /info: activity=pubsub key=bye.world process=MyProcessName subCount=3 subTime=\d+ \n/; // jscs:ignore maximumLineLength
-      const re2 = /info: activity=pubsub key=hello.world process=MyProcessName subCount=1 subTime=\d+ \n/; // jscs:ignore maximumLineLength
+    it('subscribe', () => {
+      const re1 = /info: activity=pubsub key=bye.world process=MyProcessName subCount=3 subTime=\d+ emitCount=3 emitTime=\d+ clientCount=3 clientTime=\d+ \n/; // jscs:ignore maximumLineLength
+      const re2 = /info: activity=pubsub key=hello.world process=MyProcessName subCount=1 subTime=\d+ emitCount=1 emitTime=\d+ clientCount=1 clientTime=\d+ \n/; // jscs:ignore maximumLineLength
       expect(inspect.output).to.be.an('Array');
       expect(inspect.output).to.have.lengthOf(2);
       expect(inspect.output[0]).to.match(re1);
@@ -117,46 +280,106 @@ describe('test/pubSubStats.js >', () => {
   });
 
   describe('end-to-end >', () => {
-    let io;
     let pubClient;
-    let subClients;
+    let sockets = [];
+    let token;
     let inspect;
     const redisUrl = process.env.REDIS_URL || '//127.0.0.1:6379';
-    const processName = 'p1';
+    const timestamp = Date.now();
 
     before(() => {
       inspect = stdout.inspect();
       delete global[globalKey];
       conf.pubSubPerspectives = [redisUrl];
-      conf.pubSubStatsLoggingInterval = 50;
-      testUtil.toggleOverride('enablePubSubStatsLogs', true);
+      conf.pubSubStatsLoggingInterval = 500;
+      conf.secret = 'abcdefghijkl';
+      conf.apiUrl = 'https://www.example.com';
+      conf.apiToken = 'https://www.example.com';
+      conf.authTimeout = 100;
+      conf.port = 3000;
+      conf.dyno = 'd1';
       pubClient = redis.createClient(redisUrl);
-      io = require('socket.io')(3000);
-      subClients = subscriberInit.init(io, processName);
+      start();
     });
 
-    after((done) => {
-      testUtil.toggleOverride('enablePubSubStatsLogs', false);
+    before(() => {
+      const jwtClaim = {
+        tokenname: 'token1',
+        username: 'user1',
+        timestamp,
+      };
+      token = jwt.sign(jwtClaim, conf.secret);
+
+      nock(conf.apiUrl)
+      .persist()
+      .get('/v1/users/user1/tokens/token1')
+      .matchHeader('Authorization', token)
+      .reply(200);
+
+      const options = {
+        query: {
+          id: utils.getPerspectiveNamespaceString({ rootSubject: 'root' }),
+        },
+        transports: ['websocket'],
+      };
+
+      for (let i = 0; i < 3; i++) {
+        sockets.push(
+          sioClient(`http://localhost:3000/perspectives`, options)
+          .on('connect', function () {
+            this.emit('auth', token);
+          })
+          .on('refocus.internal.realtime.sample.update', (data, cb) => cb && cb(Date.now()))
+          .on('refocus.internal.realtime.sample.add', (data, cb) => cb && cb(Date.now()))
+          .on('refocus.internal.realtime.sample.delete', (data, cb) => cb && cb(Date.now()))
+        );
+      }
+
+      return Promise.all(sockets.map((socket) =>
+        new Promise((resolve) => socket.once('authenticated', resolve))
+      ));
+    });
+
+    after(() => {
       delete global[globalKey];
       inspect.restore();
       pubClient.quit();
-      subscriberInit.cleanup();
-      io.close(done);
+      sockets.forEach((socket) => socket.close());
+      stop();
     });
 
-    const updRe = /info: activity=pubsub key=sample.update process=p1 subCount=4 subTime=\d+ \n/;
-    const addRe = /info: activity=pubsub key=sample.add process=p1 subCount=2 subTime=\d+ \n/;
-    const delRe = /info: activity=pubsub key=sample.delete process=p1 subCount=1 subTime=\d+ \n/;
+    const connRe = /info: activity=pubsub key=connections process=d1:0 connectCount=3 connectedSockets=3 \n/;
+    const updRe = /info: activity=pubsub key=refocus.internal.realtime.sample.update process=d1:0 subCount=4 subTime=\d+ emitCount=4 emitTime=\d+ clientCount=12 clientTime=\d+ \n/;
+    const addRe = /info: activity=pubsub key=refocus.internal.realtime.sample.add process=d1:0 subCount=2 subTime=\d+ emitCount=2 emitTime=\d+ clientCount=6 clientTime=\d+ \n/;
+    const delRe = /info: activity=pubsub key=refocus.internal.realtime.sample.delete process=d1:0 subCount=1 subTime=\d+ emitCount=1 emitTime=\d+ clientCount=3 clientTime=\d+ \n/;
 
     it('end-to-end', () => {
       const upd = {
-        'sample.update': { updatedAt: Date.now() - 1000 },
+        'refocus.internal.realtime.sample.update': {
+          absolutePath: 'root',
+          status: 'OK',
+          updatedAt: Date.now() - 1000,
+          aspect: { name: 'asp1' },
+          subject: { tags: [] },
+        },
       }
       const add = {
-        'sample.add': { updatedAt: Date.now() - 1000 },
+        'refocus.internal.realtime.sample.add': {
+          absolutePath: 'root',
+          status: 'OK',
+          updatedAt: Date.now() - 1000,
+          aspect: { name: 'asp1' },
+          subject: { tags: [] },
+        },
       }
       const del = {
-        'sample.delete': { updatedAt: Date.now() - 1000 },
+        'refocus.internal.realtime.sample.delete': {
+          absolutePath: 'root',
+          status: 'OK',
+          updatedAt: Date.now() - 1000,
+          aspect: { name: 'asp1' },
+          subject: { tags: [] },
+        },
       }
 
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
@@ -167,20 +390,14 @@ describe('test/pubSubStats.js >', () => {
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(del));
 
-      return new Promise((resolve) => {
-        let count = 0;
-        subClients.perspectives[0].on('message', () =>
-          count++ && count === 7 && resolve(count)
-        );
-      })
-      .delay(conf.pubSubStatsLoggingInterval)
+      return Promise.delay(conf.pubSubStatsLoggingInterval)
       .then(() => {
         expect(inspect.output).to.be.an('Array');
-        expect(inspect.output).to.have.lengthOf(3);
-        expect(inspect.output[0]).to.match(updRe);
-        expect(inspect.output[1]).to.match(addRe);
-        expect(inspect.output[2]).to.match(delRe);
-        return true;
+        expect(inspect.output).to.have.lengthOf(4);
+        expect(inspect.output[0]).to.match(connRe);
+        expect(inspect.output[1]).to.match(updRe);
+        expect(inspect.output[2]).to.match(addRe);
+        expect(inspect.output[3]).to.match(delRe);
       });
     });
   });
