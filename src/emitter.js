@@ -21,9 +21,6 @@ const initEvent = {
 };
 
 module.exports = (io, key, obj, pubOpts) => {
-  // newObjectAsString contains { key: {new: obj }}
-  const newObjectAsString = u.getNewObjAsString(key, obj);
-
   // NEW
   if (toggle.isFeatureEnabled('useNewNamespaceFormat')) {
     const eventType = key.split('.')[eventTypeIndex];
@@ -31,17 +28,17 @@ module.exports = (io, key, obj, pubOpts) => {
       const perspectives = Array.from(u.connectedRooms['/perspectives']).filter((roomName) =>
         u.shouldIEmitThisObj(roomName, obj)
       );
-      u.emitToClients(io, '/perspectives', perspectives, key, newObjectAsString);
+      u.emitToClients(io, '/perspectives', perspectives, key, obj);
     } else if (eventType === 'bot') {
       const rooms = [obj.roomId];
       const bots = [obj.botId];
-      u.emitToClients(io, '/rooms', rooms , key, newObjectAsString);
-      u.emitToClients(io, '/bots', bots  , key, newObjectAsString);
+      u.emitToClients(io, '/rooms', rooms , key, obj);
+      u.emitToClients(io, '/bots', bots  , key, obj);
     } else if (eventType === 'room') {
       const rooms = [obj.id];
       const bots = obj.type && obj.type.bots && obj.type.bots.map(bot => bot.id);
-      u.emitToClients(io, '/rooms', rooms, key, newObjectAsString);
-      u.emitToClients(io, '/bots', bots , key, newObjectAsString);
+      u.emitToClients(io, '/rooms', rooms, key, obj);
+      u.emitToClients(io, '/bots', bots , key, obj);
     }
   }
 
@@ -76,7 +73,7 @@ module.exports = (io, key, obj, pubOpts) => {
       if (connections.length > 0) {
         /* Check the perspective/room filters before emitting. */
         if (u.shouldIEmitThisObj(n, obj, pubOpts)) {
-          namespace.emit(key, newObjectAsString);
+          u.doEmit(namespace, key, obj);
         }
       }
     });

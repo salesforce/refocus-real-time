@@ -9,24 +9,11 @@
 /**
  * index.js
  *
- * Set up socket.io and redis subscriber to receive events and emit to clients.
+ * Start the app.
  */
-const debug = require('debug')('refocus-real-time');
 const throng = require('throng');
 const conf = require('./conf/config');
-const namespaceInit = require('./src/namespaceInit');
-const subscriberInit = require('./src/subscriberInit');
-
-Object.entries(conf).forEach(([key, val]) => {
-  if (val === undefined) throw new Error(`Config variable "${key}" is required.`);
-});
-
-function start(clusterProcessId = 0) {
-  const processName = `${conf.dyno ? `${conf.dyno}:${clusterProcessId}` : clusterProcessId}`;
-  const io = require('socket.io')(conf.port);
-  namespaceInit(io)
-  .then(() => subscriberInit.init(io, processName));
-}
+const { start } = require('./src/start');
 
 if (conf.isProd) {
   throng(conf.webConcurrency, start);
