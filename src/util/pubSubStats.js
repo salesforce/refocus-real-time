@@ -122,7 +122,7 @@ function track(evt, obj, time, keys) {
 
   /*
    * Calculate the elapsed time. If we can't find an "updatedAt" attribute,
-   * treat the elapsed time as 0 but console.trace the object.
+   * treat the elapsed time as 0 but log the object.
    */
   let elapsed = 0;
   let updatedAtFromObj;
@@ -136,7 +136,7 @@ function track(evt, obj, time, keys) {
     nameFromObj = obj.new.name;
     elapsed = time - new Date(obj.new.updatedAt);
   } else {
-    console.trace('Where is updatedAt? ' + JSON.stringify(obj));
+    console.error('Missing updatedAt: ' + JSON.stringify(obj));
   }
 
   if (elapsed > 2000) {
