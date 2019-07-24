@@ -427,10 +427,12 @@ function validateTokenNewFormat(socket) {
     token,
     jwtVerifyAsync(token, conf.secret),
   ))
-  .then(([token, { username, tokenname }]) =>
-    request.get(`${conf.apiUrl}/v1/users/${username}/tokens/${tokenname}`)
-           .set('Authorization', token)
-  )
+  .then(([token, { username, tokenname }]) => {
+    const path = (username === tokenname) ? `v1/users/${username}`
+                                          : `v1/users/${username}/tokens/${tokenname}`;
+    return request.get(`${conf.apiUrl}/${path}`)
+                  .set('Authorization', token);
+  })
   .timeout(conf.authTimeout);
 }
 
