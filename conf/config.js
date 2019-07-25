@@ -23,7 +23,7 @@ const config = {
   authTimeout: pe.TOKEN_AUTH_TIMEOUT || 5000,
   dyno: pe.DYNO || null,
   ipWhitelistService: pe.IP_WHITELIST_SERVICE || '',
-  port: pe.PORT || isProd ? 443 : 3000,
+  port: pe.PORT || (isProd ? 443 : 3000),
   pubSubBots: pe.REDIS_PUBSUB_BOTS || '',
   pubSubPerspectives: pe.REDIS_PUBSUB_PERSPECTIVES || '',
   pubSubStatsLoggingInterval: ms(pe.PUB_SUB_STATS_LOGGING_INTERVAL || '1m'),
@@ -68,7 +68,7 @@ const toggles = {
 
   // use new socket.io namespace/room format for IMC
   useNewNamespaceFormatImc: environmentVariableTrue(pe, 'USE_NEW_NAMESPACE_FORMAT_IMC'),
- 
+
   // log subscribe stats
   enableSubscribeStats: envVarIncludes(pe, 'ENABLE_STATS', 'subscribe'),
 
