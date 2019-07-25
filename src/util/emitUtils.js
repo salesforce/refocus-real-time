@@ -362,7 +362,8 @@ function initializeNamespace(namespace, io) {
       validateIp(socket),
       validateTokenNewFormat(socket),
     )
-    .then(() => {
+    .then((responses) => {
+      debug('initializeNamespace responses', responses);
       addToRoom(socket);
       trackConnectedRooms(socket);
       socket.emit('authenticated');
@@ -382,6 +383,7 @@ function initializeNamespace(namespace, io) {
  */
 function addToRoom(socket) {
   const roomName = socket.handshake.query.id;
+  debug('addToRoom', roomName, socket);
   socket.join(roomName);
 }
 
@@ -396,6 +398,7 @@ function trackConnectedRooms(socket) {
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
   connectedRooms[nsp.name].add(roomName);
+  debug('trackConnectedRooms', nsp.name, roomName);
 
   socket.on('disconnect', () => {
     pubSubStats.trackDisconnect();
@@ -404,6 +407,7 @@ function trackConnectedRooms(socket) {
       Object.keys(socket.rooms).includes(roomName)
     );
 
+    debug('disconnect', roomIsActive, nsp.name, roomName);
     if (!roomIsActive) {
       connectedRooms[nsp.name].delete(roomName);
     }
@@ -440,7 +444,7 @@ function validateTokenNewFormat(socket) {
  * Verify that the socket is connecting from a whitelisted IP address.
  *
  * @param {Socket} socket - the socket connection
- * @returns {Promise} resolves if the ip is valid
+ * @returns {Promise} resolves to the ip address if valid
  * @throws {Error} if the ip address is not whitelisted or can not be identified
  */
 function validateIp(socket) {
@@ -455,7 +459,9 @@ function validateIp(socket) {
       if (!res.body.allow) {
         throw new Error('Access denied: ip not allowed', ipAddress);
       }
-    })
+
+      return ipAddress;
+    });
   }
 }
 
