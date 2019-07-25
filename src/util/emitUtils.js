@@ -363,7 +363,7 @@ function initializeNamespace(namespace, io) {
       validateTokenNewFormat(socket),
     )
     .then((responses) => {
-      debug('initializeNamespace responses', responses);
+      debug('emitUtils:initializeNamespace responses', responses);
       addToRoom(socket);
       trackConnectedRooms(socket);
       socket.emit('authenticated');
@@ -383,7 +383,7 @@ function initializeNamespace(namespace, io) {
  */
 function addToRoom(socket) {
   const roomName = socket.handshake.query.id;
-  debug('addToRoom', roomName, socket);
+  debug('emitUtils:addToRoom', roomName, socket);
   socket.join(roomName);
 }
 
@@ -398,7 +398,7 @@ function trackConnectedRooms(socket) {
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
   connectedRooms[nsp.name].add(roomName);
-  debug('trackConnectedRooms', nsp.name, roomName);
+  debug('emitUtils:trackConnectedRooms', nsp.name, roomName);
 
   socket.on('disconnect', () => {
     pubSubStats.trackDisconnect();
@@ -407,7 +407,7 @@ function trackConnectedRooms(socket) {
       Object.keys(socket.rooms).includes(roomName)
     );
 
-    debug('disconnect', roomIsActive, nsp.name, roomName);
+    debug('emitUtils:disconnect', roomIsActive, nsp.name, roomName);
     if (!roomIsActive) {
       connectedRooms[nsp.name].delete(roomName);
     }
