@@ -367,12 +367,28 @@ function initializeNamespace(namespace, io) {
       validateTokenNewFormat(socket),
     )
     .then((responses) => {
-      const user = responses[1].body.name;
-      const ipAddress = responses[0];
-      logger.info(`activity=connect user=${user} ipAddress=${ipAddress} ` +
-        `nsp=${socket.nsp.name} room=${socket.handshake.query.id}`);
+      const userInfo = {
+        ipAddress: responses[0],
+      };
+
+      /*
+       * If we got back a "token" object (i.e. has property "isRevoked") then
+       * this request was initiated via API. If we got back a "user" object
+       * then this request was initiated via UI (user name = token name).
+       */
+      if (responses[1].body.hasOwnProperty('isRevoked')) {
+        userInfo.name = responses[1].body.user.name;
+        userInfo.tokenName = responses[1].body.name;
+      } else {
+        userInfo.name = responses[1].body.name;
+        userInfo.tokenName = responses[1].body.name;
+      }
+
+      logger.info(`activity=connect user=${userInfo.name} ` +
+        `ipAddress=${userInfo.ipAddress} nsp=${socket.nsp.name} ` +
+        `room=${socket.handshake.query.id} token=${userInfo.tokenName}`);
       addToRoom(socket);
-      trackConnectedRooms(socket, user, ipAddress);
+      trackConnectedRooms(socket, userInfo);
       socket.emit('authenticated');
     })
     .catch((err) => {
@@ -400,15 +416,16 @@ function addToRoom(socket) {
  * @param {Socket} socket - The socket connection
  */
 const connectedRooms = {};
-function trackConnectedRooms(socket, user, ipAddress) {
+function trackConnectedRooms(socket, userInfo) {
   pubSubStats.trackConnect();
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
   connectedRooms[nsp.name].add(roomName);
 
   socket.on('disconnect', () => {
-    logger.info(`activity=disconnect user=${user} ipAddress=${ipAddress} ` +
-      `nsp=${nsp.name} room=${socket.handshake.query.id}`);
+    logger.info(`activity=disconnect user=${userInfo.name} ` +
+      `ipAddress=${userInfo.ipAddress} nsp=${nsp.name} ` +
+      `room=${socket.handshake.query.id} token=${userInfo.tokenName}`);
     pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
     const roomIsActive = allSockets.some((socket) =>
