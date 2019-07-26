@@ -385,8 +385,8 @@ function initializeNamespace(namespace, io) {
       }
 
       logger.info(`activity=connect ipAddress=${userInfo.ipAddress} ` +
-        `nsp=${socket.nsp.name} room=${socket.handshake.query.id} ` +
-        `token=${userInfo.tokenName} user=${userInfo.name}`);
+        `nsp=${socket.nsp.name} token=${userInfo.tokenName} ` +
+        `user=${userInfo.name}`);
       addToRoom(socket);
       trackConnectedRooms(socket, userInfo);
       socket.emit('authenticated');
@@ -424,8 +424,7 @@ function trackConnectedRooms(socket, userInfo) {
 
   socket.on('disconnect', () => {
     logger.info(`activity=disconnect ipAddress=${userInfo.ipAddress} ` +
-      `nsp=${nsp.name} room=${socket.handshake.query.id} ` +
-      `token=${userInfo.tokenName} user=${userInfo.name}`);
+      `nsp=${nsp.name} token=${userInfo.tokenName} user=${userInfo.name}`);
     pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
     const roomIsActive = allSockets.some((socket) =>
