@@ -12,13 +12,17 @@
  * Emit utils.
  */
 const debug = require('debug')('refocus-real-time:emitter');
+const winston = require('winston');
+const toggle = require('feature-toggles');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
 const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
 const pubSubStats = require('./pubSubStats');
-const toggle = require('feature-toggles');
+const logger = new (winston.Logger)({
+  transports: [new (winston.transports.Console)()],
+});
 
 const filters = [
   'aspectFilter',
@@ -365,14 +369,15 @@ function initializeNamespace(namespace, io) {
     .then((responses) => {
       const user = responses[1].body.name;
       const ipAddress = responses[0];
-      debug('emitUtils:initializeNamespace authenticated %s from %s', user, ipAddress);
+      logger.info(`activity=connect user=${user} ipAddress=${ipAddress} ` +
+        `room=${socket.handshake.query.id}`);
       addToRoom(socket);
-      trackConnectedRooms(socket);
+      trackConnectedRooms(socket, user, ipAddress);
       socket.emit('authenticated');
     })
     .catch((err) => {
       pubSubStats.trackAuthError();
-      debug('emitUtils:initializeNamespace authentication error %o', err);
+      logger.error('auth error', err.message);
       socket.emit('auth error', err.message);
       socket.disconnect();
     })
@@ -395,13 +400,15 @@ function addToRoom(socket) {
  * @param {Socket} socket - The socket connection
  */
 const connectedRooms = {};
-function trackConnectedRooms(socket) {
+function trackConnectedRooms(socket, user, ipAddress) {
   pubSubStats.trackConnect();
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
   connectedRooms[nsp.name].add(roomName);
 
   socket.on('disconnect', () => {
+    logger.info(`activity=disconnect user=${user} ipAddress=${ipAddress} ` +
+      `room=${socket.handshake.query.id} nsp=${nsp.name}`);
     pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
     const roomIsActive = allSockets.some((socket) =>
