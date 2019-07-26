@@ -365,13 +365,14 @@ function initializeNamespace(namespace, io) {
     .then((responses) => {
       const user = responses[1].body.name;
       const ipAddress = responses[0];
-      debug('emitUtils:initializeNamespace %s %s', user, ipAddress);
+      debug('emitUtils:initializeNamespace authenticated %s from %s', user, ipAddress);
       addToRoom(socket);
       trackConnectedRooms(socket);
       socket.emit('authenticated');
     })
     .catch((err) => {
       pubSubStats.trackAuthError();
+      debug('emitUtils:initializeNamespace authentication error %o', err);
       socket.emit('auth error', err.message);
       socket.disconnect();
     })
@@ -385,7 +386,6 @@ function initializeNamespace(namespace, io) {
  */
 function addToRoom(socket) {
   const roomName = socket.handshake.query.id;
-  debug('emitUtils:addToRoom', roomName);
   socket.join(roomName);
 }
 
@@ -400,7 +400,6 @@ function trackConnectedRooms(socket) {
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
   connectedRooms[nsp.name].add(roomName);
-  debug('emitUtils:trackConnectedRooms', nsp.name, roomName);
 
   socket.on('disconnect', () => {
     pubSubStats.trackDisconnect();
@@ -409,7 +408,6 @@ function trackConnectedRooms(socket) {
       Object.keys(socket.rooms).includes(roomName)
     );
 
-    debug('emitUtils:disconnect', roomIsActive, nsp.name, roomName);
     if (!roomIsActive) {
       connectedRooms[nsp.name].delete(roomName);
     }
