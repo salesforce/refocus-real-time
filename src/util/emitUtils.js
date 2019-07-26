@@ -370,7 +370,7 @@ function initializeNamespace(namespace, io) {
       const user = responses[1].body.name;
       const ipAddress = responses[0];
       logger.info(`activity=connect user=${user} ipAddress=${ipAddress} ` +
-        `room=${socket.handshake.query.id}`);
+        `nsp=${socket.nsp.name} room=${socket.handshake.query.id}`);
       addToRoom(socket);
       trackConnectedRooms(socket, user, ipAddress);
       socket.emit('authenticated');
@@ -408,7 +408,7 @@ function trackConnectedRooms(socket, user, ipAddress) {
 
   socket.on('disconnect', () => {
     logger.info(`activity=disconnect user=${user} ipAddress=${ipAddress} ` +
-      `room=${socket.handshake.query.id} nsp=${nsp.name}`);
+      `nsp=${nsp.name} room=${socket.handshake.query.id}`);
     pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
     const roomIsActive = allSockets.some((socket) =>
