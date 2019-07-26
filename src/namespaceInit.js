@@ -18,12 +18,12 @@ const toggle = require('feature-toggles');
 const utils = require('./util/emitUtils');
 const conf = require('../conf/config');
 
-module.exports = (io) => {
+module.exports = (io, processName) => {
   // NEW
   if (toggle.isFeatureEnabled('useNewNamespaceFormat')) {
-    utils.initializeNamespace('/bots', io);
-    utils.initializeNamespace('/rooms', io);
-    utils.initializeNamespace('/perspectives', io);
+    utils.initializeNamespace('/bots', io, processName);
+    utils.initializeNamespace('/rooms', io, processName);
+    utils.initializeNamespace('/perspectives', io, processName);
     return Promise.resolve();
   }
 

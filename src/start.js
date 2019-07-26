@@ -41,7 +41,7 @@ module.exports = {
       );
     }
 
-    namespaceInit(io)
+    namespaceInit(io, processName)
     .then(() => subscriberInit.init(io));
   },
 

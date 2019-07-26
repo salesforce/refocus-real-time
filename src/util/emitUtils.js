@@ -359,7 +359,7 @@ function initializeBotNamespace(inst, io) {
  * @param {String} namespace - The namespace to initialize
  * @param {Socket.io} io - The socketio's server side object
  */
-function initializeNamespace(namespace, io) {
+function initializeNamespace(namespace, io, processName) {
   connectedRooms[namespace] = new Set();
   io.of(namespace).on('connect', (socket) =>
     Promise.join(
@@ -386,12 +386,12 @@ function initializeNamespace(namespace, io) {
 
       if (toggle.isFeatureEnabled('activityLoggingUser')) {
         logger.info(`activity=user:connect ipAddress=${userInfo.ipAddress} ` +
-          `nsp=${socket.nsp.name} token=${userInfo.tokenName} ` +
-          `user=${userInfo.name}`);
+          `nsp=${socket.nsp.name} process=${processName} ` +
+          `token=${userInfo.tokenName} user=${userInfo.name}`);
       }
 
       addToRoom(socket);
-      trackConnectedRooms(socket, userInfo);
+      trackConnectedRooms(socket, userInfo, processName);
       socket.emit('authenticated');
     })
     .catch((err) => {
@@ -419,7 +419,7 @@ function addToRoom(socket) {
  * @param {Socket} socket - The socket connection
  */
 const connectedRooms = {};
-function trackConnectedRooms(socket, userInfo) {
+function trackConnectedRooms(socket, userInfo, processName) {
   pubSubStats.trackConnect();
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
@@ -427,7 +427,7 @@ function trackConnectedRooms(socket, userInfo) {
   if (toggle.isFeatureEnabled('activityLoggingRoom')) {
     if (!connectedRooms[nsp.name].hasOwnProperty(roomName)) {
       logger.info(`activity=room:connect nsp=${nsp.name} ` +
-        `room=${roomName.replace(/=/g, '%3D')}`);
+        `process=${processName} room=${roomName.replace(/=/g, '%3D')}`);
     }
   }
 
@@ -436,7 +436,8 @@ function trackConnectedRooms(socket, userInfo) {
   socket.on('disconnect', () => {
     if (toggle.isFeatureEnabled('activityLoggingUser')) {
       logger.info(`activity=user:disconnect ipAddress=${userInfo.ipAddress} ` +
-        `nsp=${nsp.name} token=${userInfo.tokenName} user=${userInfo.name}`);
+        `nsp=${nsp.name} process=${processName} token=${userInfo.tokenName} ` +
+        `user=${userInfo.name}`);
     }
 
     pubSubStats.trackDisconnect();
@@ -448,7 +449,7 @@ function trackConnectedRooms(socket, userInfo) {
     if (!roomIsActive) {
       if (toggle.isFeatureEnabled('activityLoggingRoom')) {
         logger.info(`activity=room:disconnect nsp=${nsp.name} ` +
-          `room=${roomName.replace(/=/g, '%3D')}`);
+          `process=${processName} room=${roomName.replace(/=/g, '%3D')}`);
       }
 
       connectedRooms[nsp.name].delete(roomName);
