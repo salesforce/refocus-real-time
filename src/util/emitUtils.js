@@ -363,8 +363,7 @@ function initializeNamespace(namespace, io) {
       validateTokenNewFormat(socket),
     )
     .then((responses) => {
-      debug('emitUtils:initializeNamespace responses', responses[0],
-        responses[1].body);
+      debug('emitUtils:initializeNamespace %s %s', responses[1].body.name, responses[0]);
       addToRoom(socket);
       trackConnectedRooms(socket);
       socket.emit('authenticated');
