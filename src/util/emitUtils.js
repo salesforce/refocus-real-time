@@ -384,9 +384,12 @@ function initializeNamespace(namespace, io) {
         userInfo.tokenName = responses[1].body.name;
       }
 
-      logger.info(`activity=connect ipAddress=${userInfo.ipAddress} ` +
-        `nsp=${socket.nsp.name} token=${userInfo.tokenName} ` +
-        `user=${userInfo.name}`);
+      if (toggle.isFeatureEnabled('activityLoggingUser')) {
+        logger.info(`activity=user:connect ipAddress=${userInfo.ipAddress} ` +
+          `nsp=${socket.nsp.name} token=${userInfo.tokenName} ` +
+          `user=${userInfo.name}`);
+      }
+
       addToRoom(socket);
       trackConnectedRooms(socket, userInfo);
       socket.emit('authenticated');
@@ -420,11 +423,22 @@ function trackConnectedRooms(socket, userInfo) {
   pubSubStats.trackConnect();
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
+
+  if (toggle.isFeatureEnabled('activityLoggingRoom')) {
+    if (!connectedRooms[nsp.name].hasOwnProperty(roomName)) {
+      logger.info(`activity=room:connect nsp=${nsp.name} ` +
+        `room=${roomName.replace(/=/g, '%3D')}`);
+    }
+  }
+
   connectedRooms[nsp.name].add(roomName);
 
   socket.on('disconnect', () => {
-    logger.info(`activity=disconnect ipAddress=${userInfo.ipAddress} ` +
-      `nsp=${nsp.name} token=${userInfo.tokenName} user=${userInfo.name}`);
+    if (toggle.isFeatureEnabled('activityLoggingUser')) {
+      logger.info(`activity=user:disconnect ipAddress=${userInfo.ipAddress} ` +
+        `nsp=${nsp.name} token=${userInfo.tokenName} user=${userInfo.name}`);
+    }
+
     pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
     const roomIsActive = allSockets.some((socket) =>
@@ -432,6 +446,11 @@ function trackConnectedRooms(socket, userInfo) {
     );
 
     if (!roomIsActive) {
+      if (toggle.isFeatureEnabled('activityLoggingRoom')) {
+        logger.info(`activity=room:disconnect nsp=${nsp.name} ` +
+          `room=${roomName.replace(/=/g, '%3D')}`);
+      }
+
       connectedRooms[nsp.name].delete(roomName);
     }
   });
