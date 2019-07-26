@@ -363,9 +363,9 @@ function initializeNamespace(namespace, io) {
       validateTokenNewFormat(socket),
     )
     .then((responses) => {
-      socket.refocus.user = responses[1].body.name;
-      socket.refocus.ipAddress = responses[0];
-      debug('emitUtils:initializeNamespace %o', socket.refocus);
+      const user = responses[1].body.name;
+      const ipAddress = responses[0];
+      debug('emitUtils:initializeNamespace %s %s', user, ipAddress);
       addToRoom(socket);
       trackConnectedRooms(socket);
       socket.emit('authenticated');
@@ -385,7 +385,7 @@ function initializeNamespace(namespace, io) {
  */
 function addToRoom(socket) {
   const roomName = socket.handshake.query.id;
-  debug('emitUtils:addToRoom', roomName, socket.refocus);
+  debug('emitUtils:addToRoom', roomName);
   socket.join(roomName);
 }
 
