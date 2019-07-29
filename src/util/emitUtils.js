@@ -277,17 +277,17 @@ function initializePerspectiveNamespace(inst, io) {
       validateIp(socket),
       validateTokenOldFormat(socket),
     )
-    .then(() => {
-      pubSubStats.trackConnect();
-      socket.on('disconnect', () => {
-        pubSubStats.trackDisconnect();
-      });
-    })
-    .catch((err) => {
-      pubSubStats.trackAuthError();
-      socket.emit('auth error', err.message);
-      socket.disconnect();
-    })
+      .then(() => {
+        pubSubStats.trackConnect();
+        socket.on('disconnect', () => {
+          pubSubStats.trackDisconnect();
+        });
+      })
+      .catch((err) => {
+        pubSubStats.trackAuthError();
+        socket.emit('auth error', err.message);
+        socket.disconnect();
+      })
   );
 }
 
@@ -299,13 +299,13 @@ function initializePerspectiveNamespace(inst, io) {
  */
 function initializePerspectiveNamespacesFromApi(io) {
   return req
-  .get(`${conf.apiUrl}/v1/perspectives`)
-  .set('Authorization', conf.apiToken)
-  .then((perspectives) =>
-    perspectives.body.forEach((p) =>
-      initializePerspectiveNamespace(p, io)
-    )
-  );
+    .get(`${conf.apiUrl}/v1/perspectives`)
+    .set('Authorization', conf.apiToken)
+    .then((perspectives) =>
+      perspectives.body.forEach((p) =>
+        initializePerspectiveNamespace(p, io)
+      )
+    );
 }
 
 // OLD - remove along with namespace toggles
@@ -316,13 +316,13 @@ function initializePerspectiveNamespacesFromApi(io) {
  */
 function initializeBotNamespacesFromApi(io) {
   return req
-  .get(`${conf.apiUrl}/v1/rooms?active=true`)
-  .set('Authorization', conf.apiToken)
-  .then((rooms) =>
-    rooms.body.forEach((r) =>
-      initializeBotNamespace(r, io)
-    )
-  );
+    .get(`${conf.apiUrl}/v1/rooms?active=true`)
+    .set('Authorization', conf.apiToken)
+    .then((rooms) =>
+      rooms.body.forEach((r) =>
+        initializeBotNamespace(r, io)
+      )
+    );
 }
 
 // OLD - remove along with namespace toggles
@@ -338,17 +338,17 @@ function initializeBotNamespace(inst, io) {
       validateIp(socket),
       validateTokenOldFormat(socket),
     )
-    .then(() => {
-      pubSubStats.trackConnect();
-      socket.on('disconnect', () => {
-        pubSubStats.trackDisconnect();
-      });
-    })
-    .catch((err) => {
-      pubSubStats.trackAuthError();
-      socket.emit('auth error', err.message);
-      socket.disconnect();
-    })
+      .then(() => {
+        pubSubStats.trackConnect();
+        socket.on('disconnect', () => {
+          pubSubStats.trackDisconnect();
+        });
+      })
+      .catch((err) => {
+        pubSubStats.trackAuthError();
+        socket.emit('auth error', err.message);
+        socket.disconnect();
+      })
   );
 }
 
@@ -362,44 +362,30 @@ function initializeBotNamespace(inst, io) {
 function initializeNamespace(namespace, io, processName) {
   connectedRooms[namespace] = new Set();
   io.of(namespace).on('connect', (socket) =>
-    Promise.join(
-      validateIp(socket),
-      validateTokenNewFormat(socket),
-    )
-    .then((responses) => {
-      const userInfo = {
-        ipAddress: responses[0],
-      };
+    Promise.join(validateIp(socket), validateTokenNewFormat(socket))
+      .then(([ipAddress, userAndToken]) => {
+        const userInfo = {
+          ipAddress,
+          name: userAndToken.user,
+          token: userAndToken.token,
+        };
 
-      /*
-       * If we got back a "token" object (i.e. has property "isRevoked") then
-       * this request was initiated via API. If we got back a "user" object
-       * then this request was initiated via UI (user name = token name).
-       */
-      if (responses[1].body.hasOwnProperty('isRevoked')) {
-        userInfo.name = responses[1].body.user.name;
-        userInfo.tokenName = responses[1].body.name;
-      } else {
-        userInfo.name = responses[1].body.name;
-        userInfo.tokenName = responses[1].body.name;
-      }
+        if (toggle.isFeatureEnabled('activityLoggingUser')) {
+          logger.info(`activity=user:connect ipAddress=${userInfo.ipAddress} ` +
+            `nsp=${socket.nsp.name} process=${processName} ` +
+            `token=${userInfo.tokenName} user=${userInfo.name}`);
+        }
 
-      if (toggle.isFeatureEnabled('activityLoggingUser')) {
-        logger.info(`activity=user:connect ipAddress=${userInfo.ipAddress} ` +
-          `nsp=${socket.nsp.name} process=${processName} ` +
-          `token=${userInfo.tokenName} user=${userInfo.name}`);
-      }
-
-      addToRoom(socket);
-      trackConnectedRooms(socket, userInfo, processName);
-      socket.emit('authenticated');
-    })
-    .catch((err) => {
-      pubSubStats.trackAuthError();
-      logger.error('auth error', err.message);
-      socket.emit('auth error', err.message);
-      socket.disconnect();
-    })
+        addToRoom(socket);
+        trackConnectedRooms(socket, userInfo, processName);
+        socket.emit('authenticated');
+      })
+      .catch((err) => {
+        pubSubStats.trackAuthError();
+        logger.error('auth error:', err.message);
+        socket.emit('auth error', err.message);
+        socket.disconnect();
+      })
   );
 }
 
@@ -419,6 +405,7 @@ function addToRoom(socket) {
  * @param {Socket} socket - The socket connection
  */
 const connectedRooms = {};
+
 function trackConnectedRooms(socket, userInfo, processName) {
   pubSubStats.trackConnect();
   const nsp = socket.nsp;
@@ -470,17 +457,29 @@ function validateTokenOldFormat(socket) {
 // NEW
 function validateTokenNewFormat(socket) {
   return new Promise((resolve) => socket.once('auth', resolve))
-  .then((token) => Promise.join(
-    token,
-    jwtVerifyAsync(token, conf.secret),
-  ))
-  .then(([token, { username, tokenname }]) => {
-    const path = (username === tokenname) ? `v1/users/${username}`
-                                          : `v1/users/${username}/tokens/${tokenname}`;
-    return request.get(`${conf.apiUrl}/${path}`)
-                  .set('Authorization', token);
-  })
-  .timeout(conf.authTimeout);
+    .then((token) => Promise.join(
+      token,
+      jwtVerifyAsync(token, conf.secret),
+    ))
+    .then(([token, {username, tokenname}]) => {
+      const path = (username === tokenname) ? `v1/users/${username}`
+        : `v1/users/${username}/tokens/${tokenname}`;
+      return request.get(`${conf.apiUrl}/${path}`)
+        .set('Authorization', token);
+    })
+    .then((res) => {
+      /*
+       * If we got back a "token" object (i.e. has property "isRevoked") then
+       * this request was initiated via API. If we got back a "user" object
+       * then this request was initiated via UI (user name = token name).
+       */
+      if (res.body.hasOwnProperty('isRevoked')) {
+        return {user: res.body.user.name, token: res.body.name};
+      }
+
+      return {user: res.body.name, token: res.body.name};
+    })
+    .timeout(conf.authTimeout);
 }
 
 /**
@@ -498,13 +497,13 @@ function validateIp(socket) {
     }
 
     return request.get(`${conf.ipWhitelistService}/${conf.ipWhitelistPath}/${ipAddress}`)
-    .then((res) => {
-      if (!res.body.allow) {
-        throw new Error('Access denied: ip not allowed', ipAddress);
-      }
+      .then((res) => {
+        if (!res.body.allow) {
+          throw new Error('Access denied: ip not allowed', ipAddress);
+        }
 
-      return ipAddress;
-    });
+        return ipAddress;
+      });
   }
 }
 
@@ -533,7 +532,7 @@ function getIpAddressFromSocket(socket) {
 function getNewObjAsString(key, obj) {
   const wrappedObj = {};
   if (key.endsWith('update')) {
-    wrappedObj[key] = { new: obj };
+    wrappedObj[key] = {new: obj};
   } else if (key === 'refocus.internal.realtime.sample.nochange') {
     wrappedObj[key] = {
       name: obj.name,
@@ -582,11 +581,11 @@ function doEmit(nsp, key, obj) {
     nsp.emit(key, newObjectAsString);
   } else {
     Object.values(nsp.connected)
-    .forEach((socket) => {
-      socket.emit(key, newObjectAsString, (time) =>
-        pubSubStats.trackClient(key, obj, time)
-      );
-    });
+      .forEach((socket) => {
+        socket.emit(key, newObjectAsString, (time) =>
+          pubSubStats.trackClient(key, obj, time)
+        );
+      });
   }
 }
 
@@ -601,6 +600,7 @@ function doEmit(nsp, key, obj) {
  * @returns {Object} - returns the parsed message object.
  */
 const subjectRemove = 'refocus.internal.realtime.subject.remove';
+
 function parseObject(messgObj, key) {
   if (key === subjectRemove && messgObj.old) {
     return messgObj.old;
