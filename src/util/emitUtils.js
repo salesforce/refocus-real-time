@@ -373,7 +373,7 @@ function initializeNamespace(namespace, io, processName) {
         if (toggle.isFeatureEnabled('activityLoggingUser')) {
           logger.info(`activity=user:connect ipAddress=${userInfo.ipAddress} ` +
             `nsp=${socket.nsp.name} process=${processName} ` +
-            `token=${userInfo.tokenName} user=${userInfo.name}`);
+            `token=${userInfo.token} user=${userInfo.name}`);
         }
 
         addToRoom(socket);
@@ -423,7 +423,7 @@ function trackConnectedRooms(socket, userInfo, processName) {
   socket.on('disconnect', () => {
     if (toggle.isFeatureEnabled('activityLoggingUser')) {
       logger.info(`activity=user:disconnect ipAddress=${userInfo.ipAddress} ` +
-        `nsp=${nsp.name} process=${processName} token=${userInfo.tokenName} ` +
+        `nsp=${nsp.name} process=${processName} token=${userInfo.token} ` +
         `user=${userInfo.name}`);
     }
 
