@@ -386,6 +386,7 @@ function initializeNamespace(namespace, io, processName) {
           token: userAndToken.token,
         };
 
+        console.log('calling logUserActivity:connect', userInfo, socket.nsp.name, processName)
         logUserActivity('connect', userInfo, socket.nsp.name, processName);
         addToRoom(socket);
         trackConnectedRooms(socket, userInfo, processName);
@@ -423,12 +424,14 @@ function trackConnectedRooms(socket, userInfo, processName) {
   const roomName = socket.handshake.query.id;
 
   if (!connectedRooms[nsp.name].hasOwnProperty(roomName)) {
+    console.log('calling logRoomActivity:connect', userInfo, nsp.name, processName, roomName)
     logRoomActivity('connect', userInfo, nsp.name, processName, roomName);
   }
 
   connectedRooms[nsp.name].add(roomName);
 
   socket.on('disconnect', () => {
+    console.log('calling logUserActivity:disconnect', userInfo, nsp.name, processName)
     logUserActivity('disconnect', userInfo, nsp.name, processName);
     pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
@@ -437,6 +440,7 @@ function trackConnectedRooms(socket, userInfo, processName) {
     );
 
     if (!roomIsActive) {
+      console.log('calling logRoomActivity:disconnect', userInfo, nsp.name, processName, roomName)
       logRoomActivity('disconnect', userInfo, nsp.name, processName, roomName);
       connectedRooms[nsp.name].delete(roomName);
     }
