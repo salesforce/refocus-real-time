@@ -352,6 +352,22 @@ function initializeBotNamespace(inst, io) {
   );
 }
 
+function logUserActivity(activityType, userInfo, namespace, processName) {
+  if (toggle.isFeatureEnabled('activityLoggingUser')) {
+    logger.info(`activity=user:${activityType} ` +
+      `ipAddress=${userInfo.ipAddress} ` +
+      `nsp=${namespace} process=${processName} ` +
+      `token=${userInfo.token} user=${userInfo.name}`);
+  }
+}
+
+function logRoomActivity(activityType, userInfo, namespace, processName, roomName) {
+  if (toggle.isFeatureEnabled('activityLoggingRoom')) {
+    logger.info(`activity=room:${activityType} nsp=${namespace} ` +
+      `process=${processName} room=${roomName.replace(/=/g, '%3D')}`);
+  }
+}
+
 // NEW
 /**
  * Initialize a socketIO namespace with a connect event that validates the
@@ -370,12 +386,7 @@ function initializeNamespace(namespace, io, processName) {
           token: userAndToken.token,
         };
 
-        if (toggle.isFeatureEnabled('activityLoggingUser')) {
-          logger.info(`activity=user:connect ipAddress=${userInfo.ipAddress} ` +
-            `nsp=${socket.nsp.name} process=${processName} ` +
-            `token=${userInfo.token} user=${userInfo.name}`);
-        }
-
+        logUserActivity('connect', userInfo, socket.nsp.name, processName);
         addToRoom(socket);
         trackConnectedRooms(socket, userInfo, processName);
         socket.emit('authenticated');
@@ -411,22 +422,14 @@ function trackConnectedRooms(socket, userInfo, processName) {
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
 
-  if (toggle.isFeatureEnabled('activityLoggingRoom')) {
-    if (!connectedRooms[nsp.name].hasOwnProperty(roomName)) {
-      logger.info(`activity=room:connect nsp=${nsp.name} ` +
-        `process=${processName} room=${roomName.replace(/=/g, '%3D')}`);
-    }
+  if (!connectedRooms[nsp.name].hasOwnProperty(roomName)) {
+    logRoomActivity('connect', userInfo, nsp.name, processName, roomName);
   }
 
   connectedRooms[nsp.name].add(roomName);
 
   socket.on('disconnect', () => {
-    if (toggle.isFeatureEnabled('activityLoggingUser')) {
-      logger.info(`activity=user:disconnect ipAddress=${userInfo.ipAddress} ` +
-        `nsp=${nsp.name} process=${processName} token=${userInfo.token} ` +
-        `user=${userInfo.name}`);
-    }
-
+    logUserActivity('disconnect', userInfo, nsp.name, processName);
     pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
     const roomIsActive = allSockets.some((socket) =>
@@ -434,11 +437,7 @@ function trackConnectedRooms(socket, userInfo, processName) {
     );
 
     if (!roomIsActive) {
-      if (toggle.isFeatureEnabled('activityLoggingRoom')) {
-        logger.info(`activity=room:disconnect nsp=${nsp.name} ` +
-          `process=${processName} room=${roomName.replace(/=/g, '%3D')}`);
-      }
-
+      logRoomActivity('disconnect', userInfo, nsp.name, processName, roomName);
       connectedRooms[nsp.name].delete(roomName);
     }
   });
