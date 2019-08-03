@@ -12,13 +12,17 @@
  * Emit utils.
  */
 const debug = require('debug')('refocus-real-time:emitter');
+const winston = require('winston');
+const toggle = require('feature-toggles');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
 const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
 const pubSubStats = require('./pubSubStats');
-const toggle = require('feature-toggles');
+const logger = new (winston.Logger)({
+  transports: [new (winston.transports.Console)()],
+});
 
 const filters = [
   'aspectFilter',
@@ -273,17 +277,17 @@ function initializePerspectiveNamespace(inst, io) {
       validateIp(socket),
       validateTokenOldFormat(socket),
     )
-    .then(() => {
-      pubSubStats.trackConnect();
-      socket.on('disconnect', () => {
-        pubSubStats.trackDisconnect();
-      });
-    })
-    .catch((err) => {
-      pubSubStats.trackAuthError();
-      socket.emit('auth error', err.message);
-      socket.disconnect();
-    })
+      .then(() => {
+        pubSubStats.trackConnect();
+        socket.on('disconnect', () => {
+          pubSubStats.trackDisconnect();
+        });
+      })
+      .catch((err) => {
+        pubSubStats.trackAuthError();
+        socket.emit('auth error', err.message);
+        socket.disconnect();
+      })
   );
 }
 
@@ -295,13 +299,13 @@ function initializePerspectiveNamespace(inst, io) {
  */
 function initializePerspectiveNamespacesFromApi(io) {
   return req
-  .get(`${conf.apiUrl}/v1/perspectives`)
-  .set('Authorization', conf.apiToken)
-  .then((perspectives) =>
-    perspectives.body.forEach((p) =>
-      initializePerspectiveNamespace(p, io)
-    )
-  );
+    .get(`${conf.apiUrl}/v1/perspectives`)
+    .set('Authorization', conf.apiToken)
+    .then((perspectives) =>
+      perspectives.body.forEach((p) =>
+        initializePerspectiveNamespace(p, io)
+      )
+    );
 }
 
 // OLD - remove along with namespace toggles
@@ -312,13 +316,13 @@ function initializePerspectiveNamespacesFromApi(io) {
  */
 function initializeBotNamespacesFromApi(io) {
   return req
-  .get(`${conf.apiUrl}/v1/rooms?active=true`)
-  .set('Authorization', conf.apiToken)
-  .then((rooms) =>
-    rooms.body.forEach((r) =>
-      initializeBotNamespace(r, io)
-    )
-  );
+    .get(`${conf.apiUrl}/v1/rooms?active=true`)
+    .set('Authorization', conf.apiToken)
+    .then((rooms) =>
+      rooms.body.forEach((r) =>
+        initializeBotNamespace(r, io)
+      )
+    );
 }
 
 // OLD - remove along with namespace toggles
@@ -334,18 +338,34 @@ function initializeBotNamespace(inst, io) {
       validateIp(socket),
       validateTokenOldFormat(socket),
     )
-    .then(() => {
-      pubSubStats.trackConnect();
-      socket.on('disconnect', () => {
-        pubSubStats.trackDisconnect();
-      });
-    })
-    .catch((err) => {
-      pubSubStats.trackAuthError();
-      socket.emit('auth error', err.message);
-      socket.disconnect();
-    })
+      .then(() => {
+        pubSubStats.trackConnect();
+        socket.on('disconnect', () => {
+          pubSubStats.trackDisconnect();
+        });
+      })
+      .catch((err) => {
+        pubSubStats.trackAuthError();
+        socket.emit('auth error', err.message);
+        socket.disconnect();
+      })
   );
+}
+
+function logUserActivity(activityType, userInfo, namespace, processName) {
+  if (toggle.isFeatureEnabled('activityLoggingUser')) {
+    logger.info(`activity=user:${activityType} ` +
+      `ipAddress=${userInfo.ipAddress} ` +
+      `nsp=${namespace} process=${processName} ` +
+      `token=${userInfo.token} user=${userInfo.name}`);
+  }
+}
+
+function logRoomActivity(activityType, userInfo, namespace, processName, roomName) {
+  if (toggle.isFeatureEnabled('activityLoggingRoom')) {
+    logger.info(`activity=room:${activityType} nsp=${namespace} ` +
+      `process=${processName} room=${roomName.replace(/=/g, '%3D')}`);
+  }
 }
 
 // NEW
@@ -355,23 +375,28 @@ function initializeBotNamespace(inst, io) {
  * @param {String} namespace - The namespace to initialize
  * @param {Socket.io} io - The socketio's server side object
  */
-function initializeNamespace(namespace, io) {
+function initializeNamespace(namespace, io, processName) {
   connectedRooms[namespace] = new Set();
   io.of(namespace).on('connect', (socket) =>
-    Promise.join(
-      validateIp(socket),
-      validateTokenNewFormat(socket),
-    )
-    .then(() => {
-      addToRoom(socket);
-      trackConnectedRooms(socket);
-      socket.emit('authenticated');
-    })
-    .catch((err) => {
-      pubSubStats.trackAuthError();
-      socket.emit('auth error', err.message);
-      socket.disconnect();
-    })
+    Promise.join(validateIp(socket), validateTokenNewFormat(socket))
+      .then(([ipAddress, userAndToken]) => {
+        const userInfo = {
+          ipAddress,
+          name: userAndToken.user,
+          token: userAndToken.token,
+        };
+
+        logUserActivity('connect', userInfo, socket.nsp.name, processName);
+        addToRoom(socket);
+        trackConnectedRooms(socket, userInfo, processName);
+        socket.emit('authenticated');
+      })
+      .catch((err) => {
+        pubSubStats.trackAuthError();
+        logger.error('auth error:', err.message);
+        socket.emit('auth error', err.message);
+        socket.disconnect();
+      })
   );
 }
 
@@ -391,13 +416,20 @@ function addToRoom(socket) {
  * @param {Socket} socket - The socket connection
  */
 const connectedRooms = {};
-function trackConnectedRooms(socket) {
+
+function trackConnectedRooms(socket, userInfo, processName) {
   pubSubStats.trackConnect();
   const nsp = socket.nsp;
   const roomName = socket.handshake.query.id;
+
+  if (!connectedRooms[nsp.name].hasOwnProperty(roomName)) {
+    logRoomActivity('connect', userInfo, nsp.name, processName, roomName);
+  }
+
   connectedRooms[nsp.name].add(roomName);
 
   socket.on('disconnect', () => {
+    logUserActivity('disconnect', userInfo, nsp.name, processName);
     pubSubStats.trackDisconnect();
     const allSockets = Object.values(nsp.connected);
     const roomIsActive = allSockets.some((socket) =>
@@ -405,6 +437,7 @@ function trackConnectedRooms(socket) {
     );
 
     if (!roomIsActive) {
+      logRoomActivity('disconnect', userInfo, nsp.name, processName, roomName);
       connectedRooms[nsp.name].delete(roomName);
     }
   });
@@ -423,24 +456,36 @@ function validateTokenOldFormat(socket) {
 // NEW
 function validateTokenNewFormat(socket) {
   return new Promise((resolve) => socket.once('auth', resolve))
-  .then((token) => Promise.join(
-    token,
-    jwtVerifyAsync(token, conf.secret),
-  ))
-  .then(([token, { username, tokenname }]) => {
-    const path = (username === tokenname) ? `v1/users/${username}`
-                                          : `v1/users/${username}/tokens/${tokenname}`;
-    return request.get(`${conf.apiUrl}/${path}`)
-                  .set('Authorization', token);
-  })
-  .timeout(conf.authTimeout);
+    .then((token) => Promise.join(
+      token,
+      jwtVerifyAsync(token, conf.secret),
+    ))
+    .then(([token, {username, tokenname}]) => {
+      const path = (username === tokenname) ? `v1/users/${username}`
+        : `v1/users/${username}/tokens/${tokenname}`;
+      return request.get(`${conf.apiUrl}/${path}`)
+        .set('Authorization', token);
+    })
+    .then((res) => {
+      /*
+       * If we got back a "token" object (i.e. has property "isRevoked") then
+       * this request was initiated via API. If we got back a "user" object
+       * then this request was initiated via UI (user name = token name).
+       */
+      if (res.body.hasOwnProperty('isRevoked')) {
+        return {user: res.body.user.name, token: res.body.name};
+      }
+
+      return {user: res.body.name, token: res.body.name};
+    })
+    .timeout(conf.authTimeout);
 }
 
 /**
  * Verify that the socket is connecting from a whitelisted IP address.
  *
  * @param {Socket} socket - the socket connection
- * @returns {Promise} resolves if the ip is valid
+ * @returns {Promise} resolves to the ip address if valid
  * @throws {Error} if the ip address is not whitelisted or can not be identified
  */
 function validateIp(socket) {
@@ -451,11 +496,13 @@ function validateIp(socket) {
     }
 
     return request.get(`${conf.ipWhitelistService}/${conf.ipWhitelistPath}/${ipAddress}`)
-    .then((res) => {
-      if (!res.body.allow) {
-        throw new Error('Access denied: ip not allowed', ipAddress);
-      }
-    })
+      .then((res) => {
+        if (!res.body.allow) {
+          throw new Error('Access denied: ip not allowed', ipAddress);
+        }
+
+        return ipAddress;
+      });
   }
 }
 
@@ -484,7 +531,7 @@ function getIpAddressFromSocket(socket) {
 function getNewObjAsString(key, obj) {
   const wrappedObj = {};
   if (key.endsWith('update')) {
-    wrappedObj[key] = { new: obj };
+    wrappedObj[key] = {new: obj};
   } else if (key === 'refocus.internal.realtime.sample.nochange') {
     wrappedObj[key] = {
       name: obj.name,
@@ -533,11 +580,11 @@ function doEmit(nsp, key, obj) {
     nsp.emit(key, newObjectAsString);
   } else {
     Object.values(nsp.connected)
-    .forEach((socket) => {
-      socket.emit(key, newObjectAsString, (time) =>
-        pubSubStats.trackClient(key, obj, time)
-      );
-    });
+      .forEach((socket) => {
+        socket.emit(key, newObjectAsString, (time) =>
+          pubSubStats.trackClient(key, obj, time)
+        );
+      });
   }
 }
 
@@ -552,6 +599,7 @@ function doEmit(nsp, key, obj) {
  * @returns {Object} - returns the parsed message object.
  */
 const subjectRemove = 'refocus.internal.realtime.subject.remove';
+
 function parseObject(messgObj, key) {
   if (key === subjectRemove && messgObj.old) {
     return messgObj.old;

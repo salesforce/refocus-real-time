@@ -80,6 +80,9 @@ const toggles = {
 
   // log connection stats
   enableConnectionStats: envVarIncludes(pe, 'ENABLE_STATS', 'connection'),
+
+  activityLoggingRoom: envVarIncludes(pe, 'ACTIVITY_LOGGING', 'room'),
+  activityLoggingUser: envVarIncludes(pe, 'ACTIVITY_LOGGING', 'user'),
 }; // toggles
 
 featureToggles.load(toggles);
