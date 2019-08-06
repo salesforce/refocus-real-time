@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@salesforce/refocus-logging-client": "^1.0.6",
     "bluebird": "^3.5.4",
     "debug": "^4.1.1",
     "express": "^4.17.1",
@@ -23,8 +24,7 @@
     "redis": "^2.8.0",
     "socket.io": "^2.2.0",
     "superagent": "^5.1.0",
-    "throng": "^4.0.0",
-    "winston": "^1.1.2"
+    "throng": "^4.0.0"
   },
   "devDependencies": {
     "chai": "^4.2.0",

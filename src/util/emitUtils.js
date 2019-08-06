@@ -12,7 +12,7 @@
  * Emit utils.
  */
 const debug = require('debug')('refocus-real-time:emitter');
-const winston = require('winston');
+const logger = require('@salesforce/refocus-logging-client');
 const toggle = require('feature-toggles');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
@@ -20,9 +20,6 @@ const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
 const pubSubStats = require('./pubSubStats');
-const logger = new (winston.Logger)({
-  transports: [new (winston.transports.Console)()],
-});
 
 const filters = [
   'aspectFilter',
