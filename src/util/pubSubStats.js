@@ -10,11 +10,9 @@
  * /util/pubSubStats.js
  */
 const debug = require('debug')('refocus:pubsub:elapsed');
-const winston = require('winston');
+const logger = require('@salesforce/refocus-logging-client');
 const toggle = require('feature-toggles');
-const logger = new (winston.Logger)({
-  transports: [new (winston.transports.Console)()],
-});
+
 const globalKey = 'pubsubstats';
 
 /**
