@@ -109,12 +109,12 @@ function track(evt, obj, time, keys) {
 
   // Validate args
   if (!evt || typeof evt !== 'string' || evt.length === 0) {
-    console.error('pubSubStats.track error: evt must be non-empty string');
+    logger.error('pubSubStats.track error: evt must be non-empty string');
     return;
   }
 
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-    console.error('pubSubStats.track error: obj must be a non-array object');
+    logger.error('pubSubStats.track error: obj must be a non-array object');
     return;
   }
 
@@ -134,7 +134,7 @@ function track(evt, obj, time, keys) {
     nameFromObj = obj.new.name;
     elapsed = time - new Date(obj.new.updatedAt);
   } else {
-    console.error('Missing updatedAt: ' + JSON.stringify(obj));
+    logger.error('Missing updatedAt: ' + JSON.stringify(obj));
   }
 
   if (elapsed > 2000) {
