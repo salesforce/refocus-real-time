@@ -12,6 +12,7 @@
 const debug = require('debug')('refocus:pubsub:elapsed');
 const logger = require('@salesforce/refocus-logging-client');
 const toggle = require('feature-toggles');
+const tracker = require('./kafkaTracking');
 
 const globalKey = 'pubsubstats';
 

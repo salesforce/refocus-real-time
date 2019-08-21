@@ -20,6 +20,7 @@ const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
 const pubSubStats = require('./pubSubStats');
+const tracker = require('./kafkaTracking');
 
 const filters = [
   'aspectFilter',
@@ -557,6 +558,7 @@ function getNewObjAsString(key, obj) {
 function emitToClients(io, nsp, rooms, key, obj) {
   const namespace = io.of(nsp);
   if (rooms && rooms.length) {
+    tracker.trackEmit();
     rooms.forEach((room) =>
       namespace.to(room)
     );
