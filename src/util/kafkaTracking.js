@@ -14,19 +14,19 @@ const logger = require('@salesforce/refocus-logging-client');
 const AGGR_TOPIC = 'pubSub-aggregation';
 
 const MESSAGE_TYPES = {
-  RECEIVED: 'received',
-  QUEUE_TIME: 'queueTime',
   SUBSCRIBE_TIME: 'publishTime',
+  EMITTED_TO_AND_TIME: 'emittedToAndTime'
 };
 
 const trackSubscribe = (sampleName, updatedAt) => {
   if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
     typeof updatedAt === 'number')) {
-    throw new Error('Invalid args');
+      logger.error('Received invalid args:', sampleName, updatedAt);
+      return;
   }
 
-  updatedAt = typeof updatedAt === 'number' :
-    new Date(updatedAt * 1000).toISOString() ? updatedAt;
+  updatedAt = typeof updatedAt === 'number' ?
+    new Date(updatedAt * 1000).toISOString() : updatedAt;
 
   logger.track({
     type: MESSAGE_TYPES.SUBSCRIBE_TIME,
@@ -38,18 +38,41 @@ const trackSubscribe = (sampleName, updatedAt) => {
   });
 }
 
-const trackEmit = (sampleName, updatedAt) => {
+const trackEmit = (sampleName, updatedAt, numClientsEmittedTo) => {
   if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
-    typeof updatedAt === 'number')) {
-    throw new Error('Invalid args');
+    typeof updatedAt === 'number') || typeof numClientsEmittedTo !== 'number') {
+      logger.error('Received invalid args:', sampleName, updatedAt);
+      return;
   }
 
-  updatedAt = typeof updatedAt === 'number' :
-    new Date(updatedAt * 1000).toISOString() ? updatedAt;
+  updatedAt = typeof updatedAt === 'number' ?
+    new Date(updatedAt * 1000).toISOString() : updatedAt;
 
   logger.track({
-    type: MESSAGE_TYPES.PUBLISH_TIME,
-    emitAt: Date.now(),
+    type: MESSAGE_TYPES.EMITTED_TO_AND_TIME,
+    emittedAt: Date.now(),
+    numClientsEmittedTo
+  },
+  'info', AGGR_TOPIC, {
+    sampleName,
+    updatedAt,
+  });
+}
+
+const trackClient = (sampleName, updatedAt, timeReceived) => {
+  if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
+    typeof updatedAt === 'number') || typeof numClientsEmittedTo !== 'number') {
+      logger.error('Received invalid args:', sampleName, updatedAt);
+      return;
+  }
+
+  updatedAt = typeof updatedAt === 'number' ?
+    new Date(updatedAt * 1000).toISOString() : updatedAt;
+
+  logger.track({
+    type: MESSAGE_TYPES.EMITTED_TO_AND_TIME,
+    emittedAt: Date.now(),
+    numClientsEmittedTo
   },
   'info', AGGR_TOPIC, {
     sampleName,

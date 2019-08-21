@@ -25,9 +25,7 @@ const tracker = require('../src/util/kafkaTracking');
 const sinon = require('sinon');
 const { start, stop } = require('../src/start');
 
-
-
-describe.only('test/pubSubStats.js >', () => {
+describe('test/kafkaTracking.js >', () => {
   before(() => {
     testUtil.toggleOverride('enableSubscribeStats', true);
     testUtil.toggleOverride('enableEmitStats', true);
@@ -109,12 +107,13 @@ describe.only('test/pubSubStats.js >', () => {
     });
 
     it('end-to-end', () => {
+      const updatedAt = new Date().toISOString();
       const upd = {
         'refocus.internal.realtime.sample.update': {
           name: 'testSample',
           absolutePath: 'root',
           status: 'OK',
-          updatedAt: Date.now() - 1000,
+          updatedAt,
           aspect: { name: 'asp1' },
           subject: { tags: [] },
         },
@@ -124,7 +123,7 @@ describe.only('test/pubSubStats.js >', () => {
           name: 'testSample',
           absolutePath: 'root',
           status: 'OK',
-          updatedAt: Date.now() - 1000,
+          updatedAt,
           aspect: { name: 'asp1' },
           subject: { tags: [] },
         },
@@ -134,7 +133,7 @@ describe.only('test/pubSubStats.js >', () => {
           name: 'testSample',
           absolutePath: 'root',
           status: 'OK',
-          updatedAt: Date.now() - 1000,
+          updatedAt,
           aspect: { name: 'asp1' },
           subject: { tags: [] },
         },
@@ -150,11 +149,11 @@ describe.only('test/pubSubStats.js >', () => {
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(del));
 
-
-      return Promise.delay(1000)
+      // Add a small delay for the publish and subscribe to be completed
+      return Promise.delay(100)
       .then(() => {
-        expect(trackSubscriberSpy.alwaysCalledWith('testSample')).to.be.true;
-        console.log(trackSubscriberSpy.callCount, 'call count');
+        expect(trackSubscriberSpy.alwaysCalledWithExactly('testSample', updatedAt)).to.be.true;
+        expect(trackSubscriberSpy.callCount).to.equal(7);
       });
     });
   });

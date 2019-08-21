@@ -558,7 +558,6 @@ function getNewObjAsString(key, obj) {
 function emitToClients(io, nsp, rooms, key, obj) {
   const namespace = io.of(nsp);
   if (rooms && rooms.length) {
-    tracker.trackEmit();
     rooms.forEach((room) =>
       namespace.to(room)
     );
@@ -578,9 +577,12 @@ function doEmit(nsp, key, obj) {
   if (!toggle.isFeatureEnabled('enableClientStats')) {
     nsp.emit(key, newObjectAsString);
   } else {
+    const numClients = Object.values(nsp.connected).length;
+    tracker.trackEmit(obj.name, obj.updatedAt, numClients);
     Object.values(nsp.connected)
       .forEach((socket) => {
         socket.emit(key, newObjectAsString, (time) =>
+          tracker.trackClient(obj.name, obj.updatedAt, time);
           pubSubStats.trackClient(key, obj, time)
         );
       });
