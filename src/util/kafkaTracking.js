@@ -15,19 +15,21 @@ const AGGR_TOPIC = 'pubSub-aggregation';
 
 const MESSAGE_TYPES = {
   SUBSCRIBE_TIME: 'publishTime',
-  EMITTED_TO_AND_TIME: 'emittedToAndTime'
+  EMITTED_TO_AND_TIME: 'emittedToAndTime',
+  CLIENT_TIME: 'clientTime'
 };
 
+const parseDate = (date) => typeof date === 'number' ?
+  new Date(date * 1000).toISOString() : date;
+ 
 const trackSubscribe = (sampleName, updatedAt) => {
   if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
     typeof updatedAt === 'number')) {
-      logger.error('Received invalid args:', sampleName, updatedAt);
+      logger.error(`Received invalid args: ${sampleName} ${updatedAt}`);
       return;
   }
 
-  updatedAt = typeof updatedAt === 'number' ?
-    new Date(updatedAt * 1000).toISOString() : updatedAt;
-
+  updatedAt = parseDate(updatedAt);
   logger.track({
     type: MESSAGE_TYPES.SUBSCRIBE_TIME,
     subscribedAt: Date.now(),
@@ -41,13 +43,11 @@ const trackSubscribe = (sampleName, updatedAt) => {
 const trackEmit = (sampleName, updatedAt, numClientsEmittedTo) => {
   if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
     typeof updatedAt === 'number') || typeof numClientsEmittedTo !== 'number') {
-      logger.error('Received invalid args:', sampleName, updatedAt);
+      logger.error(`Received invalid args: ${sampleName} ${updatedAt} ${numClientsEmittedTo}`);
       return;
   }
 
-  updatedAt = typeof updatedAt === 'number' ?
-    new Date(updatedAt * 1000).toISOString() : updatedAt;
-
+  updatedAt = parseDate(updatedAt);
   logger.track({
     type: MESSAGE_TYPES.EMITTED_TO_AND_TIME,
     emittedAt: Date.now(),
@@ -61,18 +61,15 @@ const trackEmit = (sampleName, updatedAt, numClientsEmittedTo) => {
 
 const trackClient = (sampleName, updatedAt, timeReceived) => {
   if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
-    typeof updatedAt === 'number') || typeof numClientsEmittedTo !== 'number') {
-      logger.error('Received invalid args:', sampleName, updatedAt);
+    typeof updatedAt === 'number') || typeof timeReceived !== 'number') {
+      logger.error(`Received invalid args: ${sampleName} ${updatedAt} ${timeReceived}`);
       return;
   }
 
-  updatedAt = typeof updatedAt === 'number' ?
-    new Date(updatedAt * 1000).toISOString() : updatedAt;
-
+  updatedAt = parseDate(updatedAt);
   logger.track({
-    type: MESSAGE_TYPES.EMITTED_TO_AND_TIME,
-    emittedAt: Date.now(),
-    numClientsEmittedTo
+    type: MESSAGE_TYPES.CLIENT_TIME,
+    timeReceived
   },
   'info', AGGR_TOPIC, {
     sampleName,
@@ -83,6 +80,7 @@ const trackClient = (sampleName, updatedAt, timeReceived) => {
 module.exports = {
   trackSubscribe,
   trackEmit,
+  trackClient,
   AGGR_TOPIC,
   MESSAGE_TYPES,
 };

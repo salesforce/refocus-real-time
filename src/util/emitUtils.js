@@ -581,10 +581,10 @@ function doEmit(nsp, key, obj) {
     tracker.trackEmit(obj.name, obj.updatedAt, numClients);
     Object.values(nsp.connected)
       .forEach((socket) => {
-        socket.emit(key, newObjectAsString, (time) =>
+        socket.emit(key, newObjectAsString, (time) => {
           tracker.trackClient(obj.name, obj.updatedAt, time);
           pubSubStats.trackClient(key, obj, time)
-        );
+        });
       });
   }
 }

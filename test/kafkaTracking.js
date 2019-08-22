@@ -24,6 +24,7 @@ const testUtil = require('./util/testUtil');
 const tracker = require('../src/util/kafkaTracking');
 const sinon = require('sinon');
 const { start, stop } = require('../src/start');
+const logger = require('@salesforce/refocus-logging-client');
 
 describe('test/kafkaTracking.js >', () => {
   before(() => {
@@ -42,12 +43,95 @@ describe('test/kafkaTracking.js >', () => {
     testUtil.toggleOverride('useNewNamespaceFormat', false);
   });
 
+  describe('trackSubscribe', () => {
+    it('Happy path', () => {
+      const loggerSpy = sinon.spy(logger, 'track');
+      const updatedAt = new Date().toISOString();
+      tracker.trackSubscribe('foo', updatedAt);
+      const args = loggerSpy.getCall(0).args;
+      expect(args[0].subscribedAt).to.be.an('number');
+      expect(args[0].type).to.equal(tracker.MESSAGE_TYPES.SUBSCRIBE_TIME);
+      expect(args[1]).to.equal('info');
+      expect(args[2]).to.equal(tracker.AGGR_TOPIC);
+      expect(args[3].sampleName).to.equal('foo');
+      expect(args[3].updatedAt).to.equal(updatedAt);
+      loggerSpy.restore();
+    });
+
+    it('Invalid args', () => {
+      const loggerSpy = sinon.spy(logger, 'track');
+      const errorSpy = sinon.spy(logger, 'error');
+      const updatedAt = undefined;
+      tracker.trackSubscribe('foo', updatedAt);
+      expect(loggerSpy.notCalled).to.be.true;
+      expect(errorSpy.called).to.be.true;
+      loggerSpy.restore();
+      errorSpy.restore();
+    });
+  });
+
+  it('trackEmit', () => {
+    it('Happy path', () => {
+      const loggerSpy = sinon.spy(logger, 'track');
+      const updatedAt = new Date().toISOString();
+      tracker.trackEmit('foo', updatedAt, 5);
+      const args = loggerSpy.getCall(0).args;
+      expect(args[0].emittedAt).to.be.an('number');
+      expect(args[0].type).to.equal(tracker.MESSAGE_TYPES.SUBSCRIBE_TIME);
+      expect(args[0].numClientsEmittedTo).to.equal(5);
+      expect(args[1]).to.equal('info');
+      expect(args[2]).to.equal(tracker.AGGR_TOPIC);
+      expect(args[3].sampleName).to.equal('foo');
+      expect(args[3].updatedAt).to.equal(updatedAt);
+      loggerSpy.restore();
+    });
+
+    it('Invalid args', () => {
+      const loggerSpy = sinon.spy(logger, 'track');
+      const errorSpy = sinon.spy(logger, 'error');
+      const updatedAt = undefined;
+      tracker.trackEmit('foo', updatedAt, 0);
+      expect(loggerSpy.notCalled).to.be.true;
+      expect(errorSpy.called).to.be.true;
+      loggerSpy.restore();
+      errorSpy.restore();
+    });
+  });
+
+  it('trackClient', () => {
+    it('Happy path', () => {
+      const loggerSpy = sinon.spy(logger, 'track');
+      const updatedAt = new Date().toISOString();
+      tracker.trackClient('foo', updatedAt, Date.now());
+      const args = loggerSpy.getCall(0).args;
+      expect(args[0].timeReceived).to.be.an('number');
+      expect(args[0].type).to.equal(tracker.MESSAGE_TYPES.SUBSCRIBE_TIME);
+      expect(args[1]).to.equal('info');
+      expect(args[2]).to.equal(tracker.AGGR_TOPIC);
+      expect(args[3].sampleName).to.equal('foo');
+      expect(args[3].updatedAt).to.equal(updatedAt);
+      loggerSpy.restore();
+    });
+
+    it('Invalid args', () => {
+      const loggerSpy = sinon.spy(logger, 'track');
+      const errorSpy = sinon.spy(logger, 'error');
+      const updatedAt = undefined;
+      tracker.trackClient('foo', updatedAt, Date.now());
+      expect(loggerSpy.notCalled).to.be.true;
+      expect(errorSpy.called).to.be.true;
+      loggerSpy.restore();
+      errorSpy.restore();
+    });
+  });
+
   describe('end-to-end >', () => {
     let pubClient;
     let sockets = [];
     let token;
     const redisUrl = process.env.REDIS_URL || '//127.0.0.1:6379';
     const timestamp = Date.now();
+    const receivedTime = Date.now(); 
 
     before(() => {
       conf.pubSubPerspectives = [redisUrl];
@@ -89,9 +173,9 @@ describe('test/kafkaTracking.js >', () => {
           .on('connect', function () {
             this.emit('auth', token);
           })
-          .on('refocus.internal.realtime.sample.update', (data, cb) => cb && cb(Date.now()))
-          .on('refocus.internal.realtime.sample.add', (data, cb) => cb && cb(Date.now()))
-          .on('refocus.internal.realtime.sample.delete', (data, cb) => cb && cb(Date.now()))
+          .on('refocus.internal.realtime.sample.update', (data, cb) => cb && cb(receivedTime))
+          .on('refocus.internal.realtime.sample.add', (data, cb) => cb && cb(receivedTime))
+          .on('refocus.internal.realtime.sample.delete', (data, cb) => cb && cb(receivedTime))
         );
       }
 
@@ -140,6 +224,8 @@ describe('test/kafkaTracking.js >', () => {
       }
 
       const trackSubscriberSpy = sinon.spy(tracker, 'trackSubscribe');
+      const trackEmitSpy = sinon.spy(tracker, 'trackEmit');
+      const trackClientSpy = sinon.spy(tracker, 'trackClient');
 
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
@@ -152,8 +238,13 @@ describe('test/kafkaTracking.js >', () => {
       // Add a small delay for the publish and subscribe to be completed
       return Promise.delay(100)
       .then(() => {
-        expect(trackSubscriberSpy.alwaysCalledWithExactly('testSample', updatedAt)).to.be.true;
         expect(trackSubscriberSpy.callCount).to.equal(7);
+        expect(trackEmitSpy.callCount).to.equal(7);
+        expect(trackClientSpy.callCount).to.equal(21);
+        expect(trackSubscriberSpy.alwaysCalledWithExactly('testSample', updatedAt)).to.be.true;
+        expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
+        expect(trackClientSpy.alwaysCalledWithExactly('testSample',
+          updatedAt, receivedTime)).to.be.true;
       });
     });
   });
