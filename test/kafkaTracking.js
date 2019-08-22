@@ -7,7 +7,7 @@
  */
 
 /**
- * test/pubSubStats.js
+ * test/kafkaTracking.js
  */
 'use strict'; // eslint-disable-line strict
 const expect = require('chai').expect;
@@ -123,6 +123,14 @@ describe('test/kafkaTracking.js >', () => {
       loggerSpy.restore();
       errorSpy.restore();
     });
+  });
+
+  it('parseDate', () => {
+    const date = Date.now();
+    const date2 = new Date(date * 1000).toISOString();
+    const res1 = tracker.parseDate(date);
+    const res2 = tracker.parseDate(date2);
+    expect(res1).to.equal(res2);
   });
 
   describe('end-to-end >', () => {

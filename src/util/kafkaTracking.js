@@ -83,4 +83,5 @@ module.exports = {
   trackClient,
   AGGR_TOPIC,
   MESSAGE_TYPES,
+  parseDate,
 };
