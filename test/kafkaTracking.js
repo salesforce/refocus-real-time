@@ -234,6 +234,7 @@ describe('test/kafkaTracking.js >', () => {
       const trackSubscriberSpy = sinon.spy(tracker, 'trackSubscribe');
       const trackEmitSpy = sinon.spy(tracker, 'trackEmit');
       const trackClientSpy = sinon.spy(tracker, 'trackClient');
+      const loggerSpy = sinon.spy(logger, 'track');
 
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
@@ -249,6 +250,7 @@ describe('test/kafkaTracking.js >', () => {
         expect(trackSubscriberSpy.callCount).to.equal(7);
         expect(trackEmitSpy.callCount).to.equal(7);
         expect(trackClientSpy.callCount).to.equal(21);
+        expect(loggerSpy.callCount).to.equal(35);
         expect(trackSubscriberSpy.alwaysCalledWithExactly('testSample', updatedAt)).to.be.true;
         expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
         expect(trackClientSpy.alwaysCalledWithExactly('testSample',

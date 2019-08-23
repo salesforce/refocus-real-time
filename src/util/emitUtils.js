@@ -579,7 +579,6 @@ function doEmit(nsp, key, obj) {
   if (!toggle.isFeatureEnabled('enableClientStats')) {
     nsp.emit(key, newObjectAsString);
   } else {
-    tracker.trackEmit(obj.name, obj.updatedAt, numClients);
     Object.values(nsp.connected)
       .forEach((socket) => {
         socket.emit(key, newObjectAsString, (time) => {
