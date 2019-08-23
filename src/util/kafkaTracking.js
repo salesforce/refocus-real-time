@@ -14,7 +14,7 @@ const logger = require('@salesforce/refocus-logging-client');
 const AGGR_TOPIC = 'pubSub-aggregation';
 
 const MESSAGE_TYPES = {
-  SUBSCRIBE_TIME: 'publishTime',
+  SUBSCRIBE_TIME: 'subTime',
   EMITTED_TO_AND_TIME: 'emittedToAndTime',
   CLIENT_TIME: 'clientTime'
 };
