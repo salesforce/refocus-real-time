@@ -573,11 +573,12 @@ function emitToClients(io, nsp, rooms, key, obj) {
  */
 function doEmit(nsp, key, obj) {
   const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
+  const numClients = Object.values(nsp.connected).length;
+  tracker.trackEmit(obj.name, obj.updatedAt, numClients);
   pubSubStats.trackEmit(key, obj);
   if (!toggle.isFeatureEnabled('enableClientStats')) {
     nsp.emit(key, newObjectAsString);
   } else {
-    const numClients = Object.values(nsp.connected).length;
     tracker.trackEmit(obj.name, obj.updatedAt, numClients);
     Object.values(nsp.connected)
       .forEach((socket) => {
