@@ -390,7 +390,7 @@ function initializeNamespace(namespace, io, processName) {
       })
       .catch((err) => {
         pubSubStats.trackAuthError();
-        logger.error('auth error:', err.message);
+        logger.error(`auth error: ${err.message}`);
         socket.emit('auth error', err.message);
         socket.disconnect();
       })
