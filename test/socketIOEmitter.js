@@ -17,6 +17,7 @@ const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
 const nock = require('nock');
 const conf = require('../conf/config');
+
 const connectUtil = require('./util/connectUtil');
 const emitUtil = require('./util/emitUtil');
 const testUtil = require('./util/testUtil');
