@@ -61,7 +61,6 @@ const trackClient = (sampleName, updatedAt, acknowledgedAt) => {
       updatedAt,
     });
   }
-    
 }
 
 module.exports = {
