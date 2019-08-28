@@ -43,18 +43,18 @@ const trackEmit = (sampleName, updatedAt, numClientsEmittedTo) => {
   }
 }
 
-const trackClient = (sampleName, updatedAt, timeReceived) => {
+const trackClient = (sampleName, updatedAt, acknowledgedAt) => {
   if (featureToggles.isFeatureEnabled('enableKafkaPubSubAggregation')) {
     if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
-      typeof updatedAt === 'number') || typeof timeReceived !== 'number') {
-        logger.error(`Received invalid args in trackClient: ${sampleName} ${updatedAt} ${timeReceived}`);
+      typeof updatedAt === 'number') || typeof acknowledgedAt !== 'number') {
+        logger.error(`Received invalid args in trackClient: ${sampleName} ${updatedAt} ${acknowledgedAt}`);
         return;
     }
 
     updatedAt = parseDate(updatedAt);
     logger.track({
       type: MESSAGE_TYPES.ACKNOWLEDGED,
-      timeReceived
+      acknowledgedAt
     },
     'info', pubSubAggregationTopic, {
       sampleName,
