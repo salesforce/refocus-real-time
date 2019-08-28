@@ -33,7 +33,7 @@ const config = {
   perspectiveChannel: 'focus',
   botChannel: 'imc',
   ipWhitelistPath: 'v1/verify',
-  pubSubAggregationTopic: pe.PUBSUB_AGGREGATION_TOPIC || '',
+  pubSubAggregationTopic: pe.PUBSUB_AGGREGATION_TOPIC || 'pub-sub-aggregation',
 };
 
 /*

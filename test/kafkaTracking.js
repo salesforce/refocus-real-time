@@ -56,7 +56,7 @@ describe('test/kafkaTracking.js >', () => {
       expect(args[0].type).to.equal('emitted');
       expect(args[0].numClientsEmittedTo).to.equal(5);
       expect(args[1]).to.equal('info');
-      expect(args[2]).to.equal();
+      expect(args[2]).to.equal('pub-sub-aggregation');
       expect(args[3].sampleName).to.equal('foo');
       expect(args[3].updatedAt).to.equal(updatedAt);
       loggerSpy.restore();
@@ -83,7 +83,7 @@ describe('test/kafkaTracking.js >', () => {
       expect(args[0].timeReceived).to.be.an('number');
       expect(args[0].type).to.equal('acknowledged');
       expect(args[1]).to.equal('info');
-      expect(args[2]).to.equal('');
+      expect(args[2]).to.equal('pub-sub-aggregation');
       expect(args[3].sampleName).to.equal('foo');
       expect(args[3].updatedAt).to.equal(updatedAt);
       loggerSpy.restore();
