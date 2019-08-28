@@ -25,7 +25,7 @@ const testUtil = require('./util/testUtil');
 const { start, stop } = require('../src/start');
 const globalKey = 'pubsubstats';
 
-describe.skip('test/pubSubStats.js >', () => {
+describe('test/pubSubStats.js >', () => {
   before(() => {
     testUtil.toggleOverride('enableSubscribeStats', true);
     testUtil.toggleOverride('enableEmitStats', true);
