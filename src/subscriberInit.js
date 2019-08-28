@@ -18,7 +18,6 @@ const conf = require('../conf/config');
 const emitUtils = require('./util/emitUtils');
 const pubSubStats = require('./util/pubSubStats');
 const emitter = require('./emitter');
-const tracker = require('./util/kafkaTracking');
 
 const clients = {
   bots: [],
@@ -52,7 +51,6 @@ module.exports = {
 
       // Deleting pubOpts from parsedObj before passing it to the emitter
       delete parsedObj.pubOpts;
-      tracker.trackSubscribe(parsedObj.name, parsedObj.updatedAt);
       pubSubStats.trackSubscribe(key, parsedObj);
 
       /*

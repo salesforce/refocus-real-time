@@ -11,49 +11,30 @@
  */
 const logger = require('@salesforce/refocus-logging-client');
 
-const AGGR_TOPIC = 'pubSub-aggregation';
+const { pubSubAggregationTopic } = require('../../conf/config');
 
 const MESSAGE_TYPES = {
-  SUBSCRIBE_TIME: 'subTime',
-  EMITTED_TO_AND_TIME: 'emittedToAndTime',
-  CLIENT_TIME: 'clientTime'
+  EMITTED: 'emitted',
+  ACKNOWLEDGED: 'acknowledged'
 };
 
 const parseDate = (date) => typeof date === 'number' ?
   new Date(date * 1000).toISOString() : date;
- 
-const trackSubscribe = (sampleName, updatedAt) => {
-  if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
-    typeof updatedAt === 'number')) {
-      logger.error(`Received invalid args: ${sampleName} ${updatedAt}`);
-      return;
-  }
-
-  updatedAt = parseDate(updatedAt);
-  logger.track({
-    type: MESSAGE_TYPES.SUBSCRIBE_TIME,
-    subscribedAt: Date.now(),
-  },
-  'info', AGGR_TOPIC, {
-    sampleName,
-    updatedAt,
-  });
-}
 
 const trackEmit = (sampleName, updatedAt, numClientsEmittedTo) => {
   if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
     typeof updatedAt === 'number') || typeof numClientsEmittedTo !== 'number') {
-      logger.error(`Received invalid args: ${sampleName} ${updatedAt} ${numClientsEmittedTo}`);
+      logger.error(`Received invalid args in trackEmit: ${sampleName} ${updatedAt} ${numClientsEmittedTo}`);
       return;
   }
 
   updatedAt = parseDate(updatedAt);
   logger.track({
-    type: MESSAGE_TYPES.EMITTED_TO_AND_TIME,
+    type: MESSAGE_TYPES.EMITTED,
     emittedAt: Date.now(),
     numClientsEmittedTo
   },
-  'info', AGGR_TOPIC, {
+  'info', pubSubAggregationTopic, {
     sampleName,
     updatedAt,
   });
@@ -62,26 +43,23 @@ const trackEmit = (sampleName, updatedAt, numClientsEmittedTo) => {
 const trackClient = (sampleName, updatedAt, timeReceived) => {
   if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
     typeof updatedAt === 'number') || typeof timeReceived !== 'number') {
-      logger.error(`Received invalid args: ${sampleName} ${updatedAt} ${timeReceived}`);
+      logger.error(`Received invalid args in trackClient: ${sampleName} ${updatedAt} ${timeReceived}`);
       return;
   }
 
   updatedAt = parseDate(updatedAt);
   logger.track({
-    type: MESSAGE_TYPES.CLIENT_TIME,
+    type: MESSAGE_TYPES.ACKNOWLEDGED,
     timeReceived
   },
-  'info', AGGR_TOPIC, {
+  'info', pubSubAggregationTopic, {
     sampleName,
     updatedAt,
   });
 }
 
 module.exports = {
-  trackSubscribe,
   trackEmit,
   trackClient,
-  AGGR_TOPIC,
-  MESSAGE_TYPES,
-  parseDate,
+  parseDate, // exported for testing
 };

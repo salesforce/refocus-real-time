@@ -33,6 +33,8 @@ describe('test/kafkaTracking.js >', () => {
     testUtil.toggleOverride('enableClientStats', true);
     testUtil.toggleOverride('enableConnectionStats', true);
     testUtil.toggleOverride('useNewNamespaceFormat', true);
+    testUtil.toggleOverride('enableKafkaPubSubAggregation', true);
+
   });
 
   after(() => {
@@ -41,33 +43,7 @@ describe('test/kafkaTracking.js >', () => {
     testUtil.toggleOverride('enableClientStats', false);
     testUtil.toggleOverride('enableConnectionStats', false);
     testUtil.toggleOverride('useNewNamespaceFormat', false);
-  });
-
-  describe('trackSubscribe', () => {
-    it('Happy path', () => {
-      const loggerSpy = sinon.spy(logger, 'track');
-      const updatedAt = new Date().toISOString();
-      tracker.trackSubscribe('foo', updatedAt);
-      const args = loggerSpy.getCall(0).args;
-      expect(args[0].subscribedAt).to.be.an('number');
-      expect(args[0].type).to.equal(tracker.MESSAGE_TYPES.SUBSCRIBE_TIME);
-      expect(args[1]).to.equal('info');
-      expect(args[2]).to.equal(tracker.AGGR_TOPIC);
-      expect(args[3].sampleName).to.equal('foo');
-      expect(args[3].updatedAt).to.equal(updatedAt);
-      loggerSpy.restore();
-    });
-
-    it('Invalid args', () => {
-      const loggerSpy = sinon.spy(logger, 'track');
-      const errorSpy = sinon.spy(logger, 'error');
-      const updatedAt = undefined;
-      tracker.trackSubscribe('foo', updatedAt);
-      expect(loggerSpy.notCalled).to.be.true;
-      expect(errorSpy.called).to.be.true;
-      loggerSpy.restore();
-      errorSpy.restore();
-    });
+    testUtil.toggleOverride('enableKafkaPubSubAggregation', false);
   });
 
   it('trackEmit', () => {
@@ -77,10 +53,10 @@ describe('test/kafkaTracking.js >', () => {
       tracker.trackEmit('foo', updatedAt, 5);
       const args = loggerSpy.getCall(0).args;
       expect(args[0].emittedAt).to.be.an('number');
-      expect(args[0].type).to.equal(tracker.MESSAGE_TYPES.SUBSCRIBE_TIME);
+      expect(args[0].type).to.equal('emitted');
       expect(args[0].numClientsEmittedTo).to.equal(5);
       expect(args[1]).to.equal('info');
-      expect(args[2]).to.equal(tracker.AGGR_TOPIC);
+      expect(args[2]).to.equal();
       expect(args[3].sampleName).to.equal('foo');
       expect(args[3].updatedAt).to.equal(updatedAt);
       loggerSpy.restore();
@@ -105,9 +81,9 @@ describe('test/kafkaTracking.js >', () => {
       tracker.trackClient('foo', updatedAt, Date.now());
       const args = loggerSpy.getCall(0).args;
       expect(args[0].timeReceived).to.be.an('number');
-      expect(args[0].type).to.equal(tracker.MESSAGE_TYPES.SUBSCRIBE_TIME);
+      expect(args[0].type).to.equal('acknowledged');
       expect(args[1]).to.equal('info');
-      expect(args[2]).to.equal(tracker.AGGR_TOPIC);
+      expect(args[2]).to.equal('');
       expect(args[3].sampleName).to.equal('foo');
       expect(args[3].updatedAt).to.equal(updatedAt);
       loggerSpy.restore();
@@ -231,7 +207,6 @@ describe('test/kafkaTracking.js >', () => {
         },
       }
 
-      const trackSubscriberSpy = sinon.spy(tracker, 'trackSubscribe');
       const trackEmitSpy = sinon.spy(tracker, 'trackEmit');
       const trackClientSpy = sinon.spy(tracker, 'trackClient');
       const loggerSpy = sinon.spy(logger, 'track');
@@ -247,11 +222,9 @@ describe('test/kafkaTracking.js >', () => {
       // Add a small delay for the publish and subscribe to be completed
       return Promise.delay(100)
       .then(() => {
-        expect(trackSubscriberSpy.callCount).to.equal(7);
         expect(trackEmitSpy.callCount).to.equal(7);
         expect(trackClientSpy.callCount).to.equal(21);
-        expect(loggerSpy.callCount).to.equal(35);
-        expect(trackSubscriberSpy.alwaysCalledWithExactly('testSample', updatedAt)).to.be.true;
+        expect(loggerSpy.callCount).to.equal(28);
         expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
         expect(trackClientSpy.alwaysCalledWithExactly('testSample',
           updatedAt, receivedTime)).to.be.true;
