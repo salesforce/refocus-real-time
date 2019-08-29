@@ -124,7 +124,7 @@ describe('test/kafkaTracking.js >', () => {
       conf.apiUrl = 'https://www.example.com';
       conf.apiToken = 'https://www.example.com';
       conf.authTimeout = 100;
-      conf.port = 3000;
+      conf.port = 4000;
       conf.dyno = 'd1';
       pubClient = redis.createClient(redisUrl);
       start();
@@ -153,7 +153,7 @@ describe('test/kafkaTracking.js >', () => {
 
       for (let i = 0; i < 3; i++) {
         sockets.push(
-          sioClient(`http://localhost:3000/perspectives`, options)
+          sioClient(`http://localhost:4000/perspectives`, options)
           .on('connect', function () {
             this.emit('auth', token);
           })
