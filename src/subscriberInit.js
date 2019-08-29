@@ -51,7 +51,6 @@ module.exports = {
 
       // Deleting pubOpts from parsedObj before passing it to the emitter
       delete parsedObj.pubOpts;
-
       pubSubStats.trackSubscribe(key, parsedObj);
 
       /*

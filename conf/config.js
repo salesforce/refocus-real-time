@@ -33,6 +33,7 @@ const config = {
   perspectiveChannel: 'focus',
   botChannel: 'imc',
   ipWhitelistPath: 'v1/verify',
+  pubSubAggregationTopic: pe.PUBSUB_AGGREGATION_TOPIC || 'pub-sub-aggregation',
 };
 
 /*
@@ -83,6 +84,9 @@ const toggles = {
 
   activityLoggingRoom: envVarIncludes(pe, 'ACTIVITY_LOGGING', 'room'),
   activityLoggingUser: envVarIncludes(pe, 'ACTIVITY_LOGGING', 'user'),
+
+  // enable Kafka PubSub Aggregation
+  enableKafkaPubSubAggregation: environmentVariableTrue(pe, 'ENABLE_KAFKA_PUBSUB_AGGREGATION'),
 }; // toggles
 
 featureToggles.load(toggles);

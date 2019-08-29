@@ -20,6 +20,7 @@ const conf = require('../../conf/config');
 const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
 const pubSubStats = require('./pubSubStats');
+const tracker = require('./kafkaTracking');
 
 const filters = [
   'aspectFilter',
@@ -561,6 +562,8 @@ function emitToClients(io, nsp, rooms, key, obj) {
       namespace.to(room)
     );
     doEmit(namespace, key, obj);
+  } else if (key.startsWith('refocus.internal.realtime.sample')) {
+    tracker.trackEmit(obj.name, obj.updatedAt, 0); // wrap this around to check the key and include for only samples
   }
 }
 
@@ -572,15 +575,21 @@ function emitToClients(io, nsp, rooms, key, obj) {
  */
 function doEmit(nsp, key, obj) {
   const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
+  const numClients = Object.values(nsp.connected).length;
+  if (key.startsWith('refocus.internal.realtime.sample')) {
+    tracker.trackEmit(obj.name, obj.updatedAt, numClients);
+  }
   pubSubStats.trackEmit(key, obj);
-  if (!toggle.isFeatureEnabled('enableClientStats')) {
+  if (!toggle.isFeatureEnabled('enableClientStats')) { // dont enter the else if its not a sample
     nsp.emit(key, newObjectAsString);
-  } else {
+  } else if (key.startsWith('refocus.internal.realtime.sample')) {
     Object.values(nsp.connected)
       .forEach((socket) => {
-        socket.emit(key, newObjectAsString, (time) =>
+        socket.emit(key, newObjectAsString, (time) => {
+          // wrap this around to check the key and include for only samples
+          tracker.trackClient(obj.name, obj.updatedAt, time);
           pubSubStats.trackClient(key, obj, time)
-        );
+        });
       });
   }
 }
