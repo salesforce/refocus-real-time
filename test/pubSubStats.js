@@ -356,6 +356,7 @@ describe('test/pubSubStats.js >', () => {
     it('end-to-end', () => {
       const upd = {
         'refocus.internal.realtime.sample.update': {
+          name: 'testSample',
           absolutePath: 'root',
           status: 'OK',
           updatedAt: Date.now() - 1000,
@@ -365,6 +366,7 @@ describe('test/pubSubStats.js >', () => {
       }
       const add = {
         'refocus.internal.realtime.sample.add': {
+          name: 'testSample',
           absolutePath: 'root',
           status: 'OK',
           updatedAt: Date.now() - 1000,
@@ -374,6 +376,7 @@ describe('test/pubSubStats.js >', () => {
       }
       const del = {
         'refocus.internal.realtime.sample.delete': {
+          name: 'testSample',
           absolutePath: 'root',
           status: 'OK',
           updatedAt: Date.now() - 1000,
