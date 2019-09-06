@@ -25,7 +25,7 @@ module.exports = (io, key, obj, pubOpts) => {
 
   // NEW
   if (toggle.isFeatureEnabled('useNewNamespaceFormat')) {
-    if (eventType === 'subject' || eventType === 'sample') {
+    if (eventType === 'subject' || eventType === 'sample' || eventType === 'aspect') {
       const perspectives = Array.from(u.connectedRooms['/perspectives']).filter((roomName) =>
         u.shouldIEmitThisObj(roomName, obj)
       );
@@ -61,10 +61,10 @@ module.exports = (io, key, obj, pubOpts) => {
 
   // OLD
   let emitPersp = toggle.isFeatureEnabled('useOldNamespaceFormatPersp')
-                  && (eventType === 'subject' || eventType === 'sample');
+    && (eventType === 'subject' || eventType === 'sample' || eventType === 'aspect');
 
   let emitImc = toggle.isFeatureEnabled('useOldNamespaceFormatImc')
-                && (eventType === 'bot' || eventType === 'room');
+    && (eventType === 'bot' || eventType === 'room');
 
   if (emitPersp || emitImc) {
     /*

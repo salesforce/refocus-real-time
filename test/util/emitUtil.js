@@ -21,6 +21,7 @@ const u = require('../../src/util/emitUtils');
 
 const sampleUpdate = 'refocus.internal.realtime.sample.update';
 const subjectUpdate = 'refocus.internal.realtime.subject.update';
+const aspectUpdate = 'refocus.internal.realtime.aspect.update';
 const roomUpdate = 'refocus.internal.realtime.room.settingsChanged';
 const botActionUpdate = 'refocus.internal.realtime.bot.action.update';
 const botDataUpdate = 'refocus.internal.realtime.bot.data.update';
@@ -29,6 +30,7 @@ const botEventUpdate = 'refocus.internal.realtime.bot.event.update';
 const perspectiveTestFuncMap = {
   testSampleUpdate: sampleUpdate,
   testSubjectUpdate: subjectUpdate,
+  testAspectUpdate: aspectUpdate,
 };
 
 const botRoomTestFuncMap = {
@@ -83,7 +85,20 @@ module.exports = {
       parentAbsolutePath,
       absolutePath,
       name,
-      tags: tags,
+      tags,
+    };
+  },
+
+  textToAspect(text) {
+    const regex = /^(\S+?):?\s*(\[.*?\])?$/;
+    const result = regex.exec(text);
+    const [match, name, tagsStr] = result;
+    const tags = tagsStr && tagsStr.replace(/[\[\]\s]/g, '').split(',') || [];
+
+    return {
+      name,
+      timeout: '60s',
+      tags,
     };
   },
 
