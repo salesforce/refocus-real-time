@@ -974,6 +974,334 @@ describe('test/socketIOEmitter.js >', () => {
         });
       });
 
+      describe('aspectUpdate', () => {
+        describe('name', () => {
+          it('asp0:', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [_, 'atag1 || atag2'],
+                [x, '!atag1'],
+                [_, 'asp1 || asp2'],
+                [x, '!(asp1 || asp2)'],
+                [_, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [x, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [_, 'stag1 && (atag1 || atag2) && asp1'],
+                [_, 'stag1 && atag1 && !asp1'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [x, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [_, 'root.sub1: atag1 - info || warning || critical'],
+                [_, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [_, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+
+          it('asp1:', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [_, 'atag1 || atag2'],
+                [x, '!atag1'],
+                [x, 'asp1 || asp2'],
+                [_, '!(asp1 || asp2)'],
+                [_, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [x, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [_, 'stag1 && (atag1 || atag2) && asp1'],
+                [_, 'stag1 && atag1 && !asp1'],
+                [x, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [_, 'root.sub1: atag1 - info || warning || critical'],
+                [_, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [_, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+
+          it('asp2:', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [_, 'atag1 || atag2'],
+                [x, '!atag1'],
+                [x, 'asp1 || asp2'],
+                [_, '!(asp1 || asp2)'],
+                [_, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [x, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [_, 'stag1 && (atag1 || atag2) && asp1'],
+                [_, 'stag1 && atag1 && !asp1'],
+                [x, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [_, 'root.sub1: atag1 - info || warning || critical'],
+                [_, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [_, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+        });
+
+        describe('tags', () => {
+          it('asp0: [atag0]', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [_, 'atag1 || atag2'],
+                [x, '!atag1'],
+                [_, 'asp1 || asp2'],
+                [x, '!(asp1 || asp2)'],
+                [_, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [x, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [_, 'stag1 && (atag1 || atag2) && asp1'],
+                [_, 'stag1 && atag1 && !asp1'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [x, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [_, 'root.sub1: atag1 - info || warning || critical'],
+                [_, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [_, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+
+          it('asp0: [atag1]', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [x, 'atag1 || atag2'],
+                [_, '!atag1'],
+                [_, 'asp1 || asp2'],
+                [x, '!(asp1 || asp2)'],
+                [x, 'stag1 && (atag1 || atag2)'],
+                [x, 'atag1 && !(asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [_, 'stag1 && (atag1 || atag2) && asp1'],
+                [x, 'stag1 && atag1 && !asp1'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [x, 'root.sub1: atag1 - info || warning || critical'],
+                [x, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [x, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+
+          it('asp0: [atag2]', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [x, 'atag1 || atag2'],
+                [x, '!atag1'],
+                [_, 'asp1 || asp2'],
+                [x, '!(asp1 || asp2)'],
+                [x, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [_, 'stag1 && (atag1 || atag2) && asp1'],
+                [_, 'stag1 && atag1 && !asp1'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [x, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [_, 'root.sub1: atag1 - info || warning || critical'],
+                [x, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [x, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+        });
+
+        describe('name + tags', () => {
+          it('asp1: [atag1]', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [x, 'atag1 || atag2'],
+                [_, '!atag1'],
+                [x, 'asp1 || asp2'],
+                [_, '!(asp1 || asp2)'],
+                [x, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [x, 'stag1 && (atag1 || atag2) && asp1'],
+                [_, 'stag1 && atag1 && !asp1'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [x, 'root.sub1: atag1 - info || warning || critical'],
+                [x, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [_, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+
+          it('asp1: [atag2]', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [x, 'atag1 || atag2'],
+                [x, '!atag1'],
+                [x, 'asp1 || asp2'],
+                [_, '!(asp1 || asp2)'],
+                [x, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [x, 'stag1 && (atag1 || atag2) && asp1'],
+                [_, 'stag1 && atag1 && !asp1'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [_, 'root.sub1: atag1 - info || warning || critical'],
+                [x, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [_, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+
+          it('asp2: [atag1]', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [x, 'atag1 || atag2'],
+                [_, '!atag1'],
+                [x, 'asp1 || asp2'],
+                [_, '!(asp1 || asp2)'],
+                [x, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [_, 'stag1 && (atag1 || atag2) && asp1'],
+                [x, 'stag1 && atag1 && !asp1'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [x, 'root.sub1: atag1 - info || warning || critical'],
+                [x, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [_, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+
+          it('asp2: [atag2]', function () {
+            return emitUtil.testAspectUpdate({
+              eventBody: emitUtil.textToAspect(this.test.title),
+              clientExpectations: [
+                [x, 'noFilters'],
+                [x, 'root.sub1'],
+                [x, 'root.sub2'],
+                [x, 'root.sub2.sub4'],
+                [x, 'ok'],
+                [x, '!ok'],
+                [x, 'info || warning || critical'],
+                [x, '!(ok || timeout || invalid)'],
+                [x, 'stag1'],
+                [x, '!(stag1 || stag2)'],
+                [x, 'atag1 || atag2'],
+                [x, '!atag1'],
+                [x, 'asp1 || asp2'],
+                [_, '!(asp1 || asp2)'],
+                [x, 'stag1 && (atag1 || atag2)'],
+                [_, 'atag1 && !(asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2)'],
+                [_, 'stag1 && (atag1 || atag2) && asp1'],
+                [_, 'stag1 && atag1 && !asp1'],
+                [_, '!(stag1 || stag2) && !(atag1 || atag2) && (asp1 || asp2)'],
+                [_, '!(stag1 || stag2) && !atag1 && !(asp1 || asp2)'],
+                [_, 'root.sub1: atag1 - info || warning || critical'],
+                [x, 'root.sub2: !stag1 && (atag1 || atag2) - !(ok || info)'],
+                [_, 'root.sub2.sub4: stag1 && (atag1 || atag2) && !(asp1 || asp2) - ok'],
+              ],
+            });
+          });
+        });
+      });
+
       describe('sampleUpdate', () => {
         describe('no filter fields', () => {
           it('root.sub0|asp0 - Ok', function () {
