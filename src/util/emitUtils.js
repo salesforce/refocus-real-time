@@ -567,8 +567,8 @@ function emitToClients(io, nsp, rooms, key, obj) {
     doEmit(namespace, key, obj);
   } else if (key.startsWith('refocus.internal.realtime.sample')) {
     tracker.trackEmit(obj.name, obj.updatedAt, 0); // wrap this around to check the key and include for only samples
-  } else if (key.startsWith('refocus.internal.realtime.bot.event')) { // on an event emit there is no room specified
-    doEmit(namespace, key, obj);
+  } else if (key.startsWith('refocus.internal.realtime.bot.event')) {
+    doEmit(namespace, key, obj); // on an event emit to bots, there are no individual rooms specified
   }
 }
 
@@ -596,6 +596,8 @@ function doEmit(nsp, key, obj) {
           pubSubStats.trackClient(key, obj, time)
         });
       });
+  } else if (key.startsWith('refocus.internal.realtime.bot')) {
+    nsp.emit(key, newObjectAsString);
   }
 }
 
