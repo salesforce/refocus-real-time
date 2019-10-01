@@ -560,13 +560,15 @@ function getNewObjAsString(key, obj) {
  */
 function emitToClients(io, nsp, rooms, key, obj) {
   const namespace = io.of(nsp);
-  if (rooms && rooms.length) {
+  if (rooms && rooms.length && rooms[0]) {
     rooms.forEach((room) =>
       namespace.to(room)
     );
     doEmit(namespace, key, obj);
   } else if (key.startsWith('refocus.internal.realtime.sample')) {
     tracker.trackEmit(obj.name, obj.updatedAt, 0); // wrap this around to check the key and include for only samples
+  } else if (key.startsWith('refocus.internal.realtime.bot.event')) { // on an event emit there is no room specified
+    doEmit(namespace, key, obj);
   }
 }
 
