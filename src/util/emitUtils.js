@@ -560,7 +560,7 @@ function getNewObjAsString(key, obj) {
  */
 function emitToClients(io, nsp, rooms, key, obj) {
   const namespace = io.of(nsp);
-  if (rooms && rooms.length && rooms[0]) {
+  if (rooms && rooms.length) {
     rooms.forEach((room) =>
       namespace.to(room)
     );
@@ -591,7 +591,9 @@ function doEmit(nsp, key, obj) {
     nsp.rooms = [];
     rooms
       .forEach((room) => {
-        const socket = Object.values(nsp.connected).filter((connected) => Object.keys(connected.rooms)[1] === room)[0];
+        // Get socket for client who's id matches room
+        const socket = Object.values(nsp.connected)
+          .filter((connected) => Object.keys(connected.rooms)[1] === room)[0];
         socket.emit(key, newObjectAsString, (time) => {
           // wrap this around to check the key and include for only samples
           tracker.trackClient(obj.name, obj.updatedAt, time);
