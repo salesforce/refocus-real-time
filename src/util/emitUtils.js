@@ -581,7 +581,7 @@ function emitToClients(io, nsp, rooms, key, obj) {
 function doEmit(nsp, key, obj) {
   const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
   const numClients = Object.values(nsp.rooms).length ?
-    Object.values(nsp.rooms).length: Object.values(nsp.connected).length;
+    Object.values(nsp.rooms).length : Object.values(nsp.connected).length;
   if (key.startsWith('refocus.internal.realtime.sample')) {
     tracker.trackEmit(obj.name, obj.updatedAt, numClients);
   }
