@@ -115,7 +115,7 @@ describe('test/kafkaTracking.js >', () => {
     let token;
     const redisUrl = process.env.REDIS_URL || '//127.0.0.1:6379';
     const timestamp = Date.now();
-    const receivedTime = Date.now(); 
+    const receivedTime = Date.now();
 
     before(() => {
       conf.pubSubPerspectives = [redisUrl];
@@ -223,9 +223,8 @@ describe('test/kafkaTracking.js >', () => {
       return Promise.delay(100)
       .then(() => {
         expect(trackEmitSpy.callCount).to.equal(7);
-        expect(trackClientSpy.callCount).to.equal(21);
-        expect(loggerSpy.callCount).to.equal(28);
-        expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
+        expect(trackClientSpy.callCount).to.equal(7);
+        expect(loggerSpy.callCount).to.equal(14);
         expect(trackClientSpy.alwaysCalledWithExactly('testSample',
           updatedAt, receivedTime)).to.be.true;
       });

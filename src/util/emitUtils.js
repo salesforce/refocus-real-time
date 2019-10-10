@@ -580,23 +580,25 @@ function emitToClients(io, nsp, rooms, key, obj) {
  */
 function doEmit(nsp, key, obj) {
   const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
-  const numClients = Object.values(nsp.connected).length;
+  const numClients = Object.values(nsp.rooms).length ?
+    Object.values(nsp.rooms).length: Object.values(nsp.connected).length;
   if (key.startsWith('refocus.internal.realtime.sample')) {
     tracker.trackEmit(obj.name, obj.updatedAt, numClients);
   }
   pubSubStats.trackEmit(key, obj);
-  if (!toggle.isFeatureEnabled('enableClientStats')) { // dont enter the else if its not a sample
-    nsp.emit(key, newObjectAsString);
-  } else if (key.startsWith('refocus.internal.realtime.sample')) {
-    Object.values(nsp.connected)
-      .forEach((socket) => {
+  if (toggle.isFeatureEnabled('enableClientStats') && key.startsWith('refocus.internal.realtime.sample')) { // dont enter the else if its not a sample
+    const rooms = nsp.rooms.slice(0);
+    nsp.rooms = [];
+    rooms
+      .forEach((room) => {
+        const socket = Object.values(nsp.connected).filter((connected) => Object.keys(connected.rooms)[1] === room)[0];
         socket.emit(key, newObjectAsString, (time) => {
           // wrap this around to check the key and include for only samples
           tracker.trackClient(obj.name, obj.updatedAt, time);
           pubSubStats.trackClient(key, obj, time)
         });
       });
-  } else if (key.startsWith('refocus.internal.realtime.bot')) {
+  } else {
     nsp.emit(key, newObjectAsString);
   }
 }

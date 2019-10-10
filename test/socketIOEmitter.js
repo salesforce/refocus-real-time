@@ -13,6 +13,9 @@
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
 chai.should();
+const { expect } = chai;
+const sinon = require('sinon');
+const toggles = require('feature-toggles');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
 const nock = require('nock');
@@ -21,11 +24,12 @@ const connectUtil = require('./util/connectUtil');
 const emitUtil = require('./util/emitUtil');
 const testUtil = require('./util/testUtil');
 const utils = require('../src/util/emitUtils');
-
+let emitToClientsSpy;
 describe('test/socketIOEmitter.js >', () => {
   let token;
 
   before(() => {
+    emitToClientsSpy = sinon.spy(utils, 'emitToClients');
     conf.secret = 'abcdefghijkl';
     conf.apiUrl = 'https://www.example.com';
 
@@ -344,10 +348,51 @@ describe('test/socketIOEmitter.js >', () => {
       runFilterTests();
     });
 
+    describe('enableClientStats true', () => {
+      let sioServer;
+      let connectedClients;
+
+      before(() => {
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', true);
+        testUtil.toggleOverride('enableClientStats', true);
+        sioServer = require('socket.io')(3000);
+        utils.initializeNamespace('/bots', sioServer);
+        utils.initializeNamespace('/rooms', sioServer);
+        utils.initializeNamespace('/perspectives', sioServer);
+
+        return Promise.join(
+          connectUtil.connectPerspectivesNewFormat(sioServer, clientFilters, token),
+          connectUtil.connectBotsNewFormat(sioServer, botFilters, token),
+          connectUtil.connectRoomsNewFormat(sioServer, roomFilters, token),
+        )
+        .then(([perspectiveClients, botClients, roomClients]) => {
+          connectedClients = { ...perspectiveClients, ...botClients, ...roomClients };
+          emitUtil.setupTestFuncs({
+            sioServer,
+            perspectiveClients,
+            botClients,
+            roomClients,
+          });
+        });
+      });
+
+      after((done) => {
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', false);
+        testUtil.toggleOverride('enableClientStats', false);
+        connectUtil.closeClients(connectedClients);
+        sioServer.close(done);
+      });
+
+      runFilterTests();
+    });
+
     function runFilterTests() {
       const x = true; // event expected
       const _ = false; // event not expected
-
       describe('imc', () => {
         describe('botAction', () => {
           it('bot2, room3', function () {
@@ -386,6 +431,10 @@ describe('test/socketIOEmitter.js >', () => {
         });
 
         describe('botEvent', () => {
+          beforeEach(() => {
+            emitToClientsSpy.resetHistory();
+          });
+
           it('bot1, room1', function () {
             return emitUtil.testBotEventUpdate({
               eventBody: emitUtil.textToBotEvent(this.test.title),
@@ -400,6 +449,33 @@ describe('test/socketIOEmitter.js >', () => {
                 [_, 'room3'],
               ],
             });
+          });
+
+          it('null, room1', function () {
+            const name = 'botEvent';
+            const roomId = '1';
+            const botId = null;
+            const event = { name, roomId, botId };
+            emitUtil.testBotEventUpdate({
+              eventBody: event,
+              botExpectations: [
+                [x, 'bot1'],
+                [x, 'bot2'],
+                [x, 'bot3'],
+              ],
+              roomExpectations: [
+                [x, 'room1'],
+                [_, 'room2'],
+                [_, 'room3'],
+              ],
+            });
+            if (toggles.isFeatureEnabled('useNewNamespaceFormat')){
+              expect(emitToClientsSpy.callCount).to.equal(2);
+              expect(emitToClientsSpy.args[0][2]).to.deep.equal(['1']);
+              expect(emitToClientsSpy.args[1][2]).to.deep.equal([null]);
+            } else {
+              expect(emitToClientsSpy.called).to.equal(false);
+            }
           });
         });
 
