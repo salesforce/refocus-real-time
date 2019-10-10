@@ -32,7 +32,7 @@ module.exports = (io, key, obj, pubOpts) => {
       u.emitToClients(io, '/perspectives', perspectives, key, obj);
     } else if (eventType === 'bot') {
       const rooms = [obj.roomId];
-      const bots = obj.botId ? [obj.botId] : u.connectedRooms['/bots'];
+      const bots = obj.botId ? [obj.botId] : Object.keys(u.connectedRooms['/bots']);
       u.emitToClients(io, '/rooms', rooms , key, obj);
       u.emitToClients(io, '/bots', bots  , key, obj);
     } else if (eventType === 'room') {
