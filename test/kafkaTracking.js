@@ -225,6 +225,7 @@ describe('test/kafkaTracking.js >', () => {
         expect(trackEmitSpy.callCount).to.equal(7);
         expect(trackClientSpy.callCount).to.equal(21);
         expect(loggerSpy.callCount).to.equal(28);
+        expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
         expect(trackClientSpy.alwaysCalledWithExactly('testSample',
           updatedAt, receivedTime)).to.be.true;
       });

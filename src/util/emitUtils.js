@@ -580,25 +580,28 @@ function emitToClients(io, nsp, rooms, key, obj) {
  */
 function doEmit(nsp, key, obj) {
   const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
-  const numClients = Object.values(nsp.rooms).length ?
-    Object.values(nsp.rooms).length : Object.values(nsp.connected).length;
-  if (key.startsWith('refocus.internal.realtime.sample')) {
-    tracker.trackEmit(obj.name, obj.updatedAt, numClients);
-  }
   pubSubStats.trackEmit(key, obj);
   if (toggle.isFeatureEnabled('enableClientStats') && key.startsWith('refocus.internal.realtime.sample')) { // dont enter the else if its not a sample
+    let numClients = 0;
     const rooms = nsp.rooms.slice(0);
     nsp.rooms = [];
     Object.values(nsp.connected)
       .filter((socket) => rooms.includes(Object.keys(socket.rooms)[1]))
       .forEach((socket) => {
+        numClients++;
         socket.emit(key, newObjectAsString, (time) => {
           // wrap this around to check the key and include for only samples
           tracker.trackClient(obj.name, obj.updatedAt, time);
           pubSubStats.trackClient(key, obj, time)
         });
       });
+      tracker.trackEmit(obj.name, obj.updatedAt, numClients);
   } else {
+    const numClients = nsp.rooms.length ? Object.values(nsp.connected)
+    .filter((socket) => nsp.rooms.includes(Object.keys(socket.rooms)[1])).length : Object.keys(nsp.connected).length;
+    if (key.startsWith('refocus.internal.realtime.sample')) {
+      tracker.trackEmit(obj.name, obj.updatedAt, numClients);
+    }
     nsp.emit(key, newObjectAsString);
   }
 }
