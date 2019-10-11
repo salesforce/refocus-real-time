@@ -13,7 +13,6 @@
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
 chai.should();
-const toggles = require('feature-toggles');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
 const nock = require('nock');
