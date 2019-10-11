@@ -589,11 +589,9 @@ function doEmit(nsp, key, obj) {
   if (toggle.isFeatureEnabled('enableClientStats') && key.startsWith('refocus.internal.realtime.sample')) { // dont enter the else if its not a sample
     const rooms = nsp.rooms.slice(0);
     nsp.rooms = [];
-    rooms
-      .forEach((room) => {
-        // Get socket for client who's id matches room
-        const socket = Object.values(nsp.connected)
-          .filter((connected) => Object.keys(connected.rooms)[1] === room)[0];
+    Object.values(nsp.connected)
+      .filter((socket) => rooms.includes(Object.keys(socket.rooms)[1]))
+      .forEach((socket) => {
         socket.emit(key, newObjectAsString, (time) => {
           // wrap this around to check the key and include for only samples
           tracker.trackClient(obj.name, obj.updatedAt, time);
