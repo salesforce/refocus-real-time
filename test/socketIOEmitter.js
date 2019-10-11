@@ -13,8 +13,6 @@
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
 chai.should();
-const { expect } = chai;
-const sinon = require('sinon');
 const toggles = require('feature-toggles');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
@@ -24,12 +22,10 @@ const connectUtil = require('./util/connectUtil');
 const emitUtil = require('./util/emitUtil');
 const testUtil = require('./util/testUtil');
 const utils = require('../src/util/emitUtils');
-let emitToClientsSpy;
 describe('test/socketIOEmitter.js >', () => {
   let token;
 
   before(() => {
-    emitToClientsSpy = sinon.spy(utils, 'emitToClients');
     conf.secret = 'abcdefghijkl';
     conf.apiUrl = 'https://www.example.com';
 
@@ -431,9 +427,6 @@ describe('test/socketIOEmitter.js >', () => {
         });
 
         describe('botEvent', () => {
-          beforeEach(() => {
-            emitToClientsSpy.resetHistory();
-          });
 
           it('bot1, room1', function () {
             return emitUtil.testBotEventUpdate({
