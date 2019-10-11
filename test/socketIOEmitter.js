@@ -469,13 +469,6 @@ describe('test/socketIOEmitter.js >', () => {
                 [_, 'room3'],
               ],
             });
-            if (toggles.isFeatureEnabled('useNewNamespaceFormat')){
-              expect(emitToClientsSpy.callCount).to.equal(2);
-              expect(emitToClientsSpy.args[0][2]).to.deep.equal(['1']);
-              expect(emitToClientsSpy.args[1][2]).to.deep.equal([]);
-            } else {
-              expect(emitToClientsSpy.called).to.equal(false);
-            }
           });
         });
 
