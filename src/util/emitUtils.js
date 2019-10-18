@@ -560,6 +560,7 @@ function getNewObjAsString(key, obj) {
  */
 function emitToClients(io, nsp, rooms, key, obj) {
   const namespace = io.of(nsp);
+  pubSubStats.trackEmit(key, obj);
   if (key.startsWith('refocus.internal.realtime.sample') && toggle.isFeatureEnabled('enableClientStats')) {
     doEmitWithTracking(namespace, key, obj, rooms);
   } else {
@@ -580,6 +581,7 @@ function emitToClients(io, nsp, rooms, key, obj) {
  */
 function doEmit(nsp, key, obj) {
   const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
+  tracker.trackEmit(obj.name, obj.updatedAt);
   nsp.emit(key, newObjectAsString);
 }
 
@@ -592,7 +594,6 @@ function doEmit(nsp, key, obj) {
  */
 function doEmitWithTracking(nsp, key, obj, rooms) {
   const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
-  pubSubStats.trackEmit(key, obj);
   const sockets = Object.values(nsp.connected)
     .filter((socket) => rooms.includes(Object.keys(socket.rooms)[1]));
   sockets

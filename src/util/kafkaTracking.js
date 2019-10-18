@@ -22,14 +22,13 @@ const MESSAGE_TYPES = {
 const parseDate = (date) => typeof date === 'number' ?
   new Date(date * 1000).toISOString() : date;
 
-const trackEmit = (sampleName, updatedAt, numClientsEmittedTo) => {
+const trackEmit = (sampleName, updatedAt, numClientsEmittedTo=-1) => {
   if (featureToggles.isFeatureEnabled('enableKafkaPubSubAggregation')) {
     if (typeof sampleName !== 'string' || !(typeof updatedAt === 'string' ||
-      typeof updatedAt === 'number') || typeof numClientsEmittedTo !== 'number') {
+      typeof updatedAt === 'number')) {
         logger.error(`Received invalid args in trackEmit: ${sampleName} ${updatedAt} ${numClientsEmittedTo}`);
         return;
     }
-
     updatedAt = parseDate(updatedAt);
     logger.track({
       type: MESSAGE_TYPES.EMITTED,
