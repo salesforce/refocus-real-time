@@ -65,9 +65,9 @@ module.exports = {
 
     return {
       id,
-      type: {
-        bots,
-      },
+        RoomType: {
+          Bots: bots,
+        },
     };
   },
 
