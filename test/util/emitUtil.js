@@ -46,12 +46,17 @@ module.exports = {
   textToBotData: (text) => module.exports.textToBot('botData', text),
 
   textToBot(name, text) {
-    const regex = /^\w+(\d),\s*\w+(\d)$/;
+    const regex = /[a-z]+(\d)?(?:,\s*[a-z]+(\d)?)(?:,\s*[a-z]+(\d)?)?/;
     const result = regex.exec(text);
-    const [match, botId, roomId] = result;
+    const [match, botId, roomId, botInRoomId] = result;
     return {
       name,
       botId,
+      Room: {
+        RoomType: {
+          Bots: [{id: botInRoomId}],
+        },
+      },
       roomId,
     };
   },

@@ -462,6 +462,22 @@ describe('test/socketIOEmitter.js >', () => {
               ],
             });
           });
+
+          it('null, room1, bot1', function () {
+            return emitUtil.testBotEventUpdate({
+              eventBody: emitUtil.textToBotEvent(this.test.title),
+              botExpectations: [
+                [x, 'bot1'],
+                [_, 'bot2'],
+                [_, 'bot3'],
+              ],
+              roomExpectations: [
+                [x, 'room1'],
+                [_, 'room2'],
+                [_, 'room3'],
+              ],
+            });
+          });
         });
 
         describe('room', () => {
