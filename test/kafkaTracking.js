@@ -189,7 +189,7 @@ describe('test/kafkaTracking.js >', () => {
       stop();
     });
 
-    it('end-to-end without filtering', () => {
+    it('end-to-end without filtering', (done) => {
       const updatedAt = new Date().toISOString();
       const upd = {
         'refocus.internal.realtime.sample.update': {
@@ -230,18 +230,22 @@ describe('test/kafkaTracking.js >', () => {
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(del));
 
       // Add a small delay for the publish and subscribe to be completed
-      return Promise.delay(100)
-      .then(() => {
-        expect(trackEmitSpy.callCount).to.equal(7);
-        expect(trackClientSpy.callCount).to.equal(21);
-        expect(loggerSpy.callCount).to.equal(28);
-        expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
-        expect(trackClientSpy.alwaysCalledWithExactly('testSample',
-          updatedAt, receivedTime)).to.be.true;
-      });
+      Promise.delay(100)
+        .then(() => {
+          expect(trackEmitSpy.callCount).to.equal(7);
+          expect(trackClientSpy.callCount).to.equal(21);
+          expect(loggerSpy.callCount).to.equal(28);
+          expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
+          expect(trackClientSpy.alwaysCalledWithExactly('testSample',
+            updatedAt, receivedTime)).to.be.false;
+          done();
+        })
+        .catch((err) => {
+          done(err);
+        });
     });
 
-    it('end-to-end with filtering', () => {
+    it('end-to-end with filtering', (done) => {
       const filteredOptions = {
         query: {
           id: utils.getPerspectiveNamespaceString({ rootSubject: 'root.sub2' }),
@@ -288,15 +292,19 @@ describe('test/kafkaTracking.js >', () => {
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(filterAdd));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(filterUpd));
       // Add a small delay for the publish and subscribe to be completed
-      return Promise.delay(100)
-      .then(() => {
-        expect(trackEmitSpy.callCount).to.equal(3);
-        expect(trackClientSpy.callCount).to.equal(6);
-        expect(loggerSpy.callCount).to.equal(9); // called 4 times for the first two 'filterAdd' publishes and once for 'filterUpdate'
-        expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
-        expect(trackClientSpy.alwaysCalledWithExactly('testSample',
-          updatedAt, receivedTime)).to.be.true;
-      });
+      Promise.delay(100)
+        .then(() => {
+          expect(trackEmitSpy.callCount).to.equal(3);
+          expect(trackClientSpy.callCount).to.equal(6);
+          expect(loggerSpy.callCount).to.equal(9); // called 4 times for the first two 'filterAdd' publishes and once for 'filterUpdate'
+          expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
+          expect(trackClientSpy.alwaysCalledWithExactly('testSample',
+            updatedAt, receivedTime)).to.be.true;
+          done();
+        })
+        .catch((err) => {
+          done(err);
+        });
     });
   });
 });
