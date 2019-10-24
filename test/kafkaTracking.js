@@ -113,6 +113,9 @@ describe('test/kafkaTracking.js >', () => {
     let pubClient;
     let sockets = [];
     let token;
+    let trackEmitSpy;
+    let trackClientSpy;
+    let loggerSpy;
     const redisUrl = process.env.REDIS_URL || '//127.0.0.1:6379';
     const timestamp = Date.now();
     const receivedTime = Date.now();
@@ -128,6 +131,18 @@ describe('test/kafkaTracking.js >', () => {
       conf.dyno = 'd1';
       pubClient = redis.createClient(redisUrl);
       start();
+    });
+
+    beforeEach(() => {
+      trackEmitSpy = sinon.spy(tracker, 'trackEmit');
+      trackClientSpy = sinon.spy(tracker, 'trackClient');
+      loggerSpy = sinon.spy(logger, 'track');
+    });
+
+    afterEach(() => {
+      trackEmitSpy.restore();
+      trackClientSpy.restore();
+      loggerSpy.restore();
     });
 
     before(() => {
@@ -174,7 +189,7 @@ describe('test/kafkaTracking.js >', () => {
       stop();
     });
 
-    it('end-to-end', () => {
+    it('end-to-end without filtering', () => {
       const updatedAt = new Date().toISOString();
       const upd = {
         'refocus.internal.realtime.sample.update': {
@@ -206,11 +221,6 @@ describe('test/kafkaTracking.js >', () => {
           subject: { tags: [] },
         },
       }
-
-      const trackEmitSpy = sinon.spy(tracker, 'trackEmit');
-      const trackClientSpy = sinon.spy(tracker, 'trackClient');
-      const loggerSpy = sinon.spy(logger, 'track');
-
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
       pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
@@ -225,6 +235,64 @@ describe('test/kafkaTracking.js >', () => {
         expect(trackEmitSpy.callCount).to.equal(7);
         expect(trackClientSpy.callCount).to.equal(21);
         expect(loggerSpy.callCount).to.equal(28);
+        expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
+        expect(trackClientSpy.alwaysCalledWithExactly('testSample',
+          updatedAt, receivedTime)).to.be.true;
+      });
+    });
+
+    it('end-to-end with filtering', () => {
+      const filteredOptions = {
+        query: {
+          id: utils.getPerspectiveNamespaceString({ rootSubject: 'root.sub2' }),
+        },
+        transports: ['websocket'],
+      };
+      for (let i = 0; i < 3; i++) {
+        sockets.push(
+          sioClient(`http://localhost:3000/perspectives`, filteredOptions)
+          .on('connect', function () {
+            this.emit('auth', token);
+          })
+          .on('refocus.internal.realtime.sample.update', (data, cb) => cb && cb(receivedTime))
+          .on('refocus.internal.realtime.sample.add', (data, cb) => cb && cb(receivedTime))
+          .on('refocus.internal.realtime.sample.delete', (data, cb) => cb && cb(receivedTime))
+        );
+      }
+
+      const updatedAt = new Date().toISOString();
+
+      const filterAdd = {
+        'refocus.internal.realtime.sample.add': {
+          name: 'testSample',
+          absolutePath: 'root.sub2',
+          status: 'OK',
+          updatedAt,
+          aspect: { name: 'asp1' },
+          subject: { tags: [] },
+        },
+      }
+
+      const filterUpd = {
+        'refocus.internal.realtime.sample.upd': {
+          name: 'testSample',
+          absolutePath: 'root.sub6',
+          status: 'OK',
+          updatedAt,
+          aspect: { name: 'asp1' },
+          subject: { tags: [] },
+        },
+      }
+
+      pubClient.publish(conf.perspectiveChannel, JSON.stringify(filterAdd));
+      pubClient.publish(conf.perspectiveChannel, JSON.stringify(filterAdd));
+      pubClient.publish(conf.perspectiveChannel, JSON.stringify(filterUpd));
+      // Add a small delay for the publish and subscribe to be completed
+      return Promise.delay(100)
+      .then(() => {
+        expect(trackEmitSpy.callCount).to.equal(3);
+        expect(trackClientSpy.callCount).to.equal(6);
+        expect(loggerSpy.callCount).to.equal(9); // called 4 times for the first two 'filterAdd' publishes and once for 'filterUpdate'
         expect(trackEmitSpy.alwaysCalledWithExactly('testSample', updatedAt, 3)).to.be.true;
         expect(trackClientSpy.alwaysCalledWithExactly('testSample',
           updatedAt, receivedTime)).to.be.true;
