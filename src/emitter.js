@@ -32,12 +32,13 @@ module.exports = (io, key, obj, pubOpts) => {
       u.emitToClients(io, '/perspectives', perspectives, key, obj);
     } else if (eventType === 'bot') {
       const rooms = [obj.roomId];
-      const bots = [obj.botId];
+      const bots = obj.botId ? [obj.botId] : obj.Room && obj.Room.RoomType &&
+        obj.Room.RoomType.Bots && obj.Room.RoomType.Bots.map(bot => bot.id);
       u.emitToClients(io, '/rooms', rooms , key, obj);
       u.emitToClients(io, '/bots', bots  , key, obj);
     } else if (eventType === 'room') {
       const rooms = [obj.id];
-      const bots = obj.type && obj.type.bots && obj.type.bots.map(bot => bot.id);
+      const bots = obj.RoomType && obj.RoomType.Bots && obj.RoomType.Bots.map(bot => bot.id);
       u.emitToClients(io, '/rooms', rooms, key, obj);
       u.emitToClients(io, '/bots', bots , key, obj);
     }

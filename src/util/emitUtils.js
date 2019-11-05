@@ -560,41 +560,51 @@ function getNewObjAsString(key, obj) {
  */
 function emitToClients(io, nsp, rooms, key, obj) {
   const namespace = io.of(nsp);
-  if (rooms && rooms.length) {
-    rooms.forEach((room) =>
-      namespace.to(room)
-    );
-    doEmit(namespace, key, obj);
-  } else if (key.startsWith('refocus.internal.realtime.sample')) {
-    tracker.trackEmit(obj.name, obj.updatedAt, 0); // wrap this around to check the key and include for only samples
+  pubSubStats.trackEmit(key, obj);
+  if (key.startsWith('refocus.internal.realtime.sample') && toggle.isFeatureEnabled('enableClientStats')) {
+    doEmitWithTracking(namespace, key, obj, rooms);
+  } else {
+    if (rooms && rooms.length) {
+      rooms.forEach((room) =>
+        namespace.to(room)
+      );
+      doEmit(namespace, key, obj);
+    }
   }
 }
 
 /**
- * Emit to the provided namespace, tracking stats if enabled.
+ * Emit to the provided namespace.
  * @param {Object}  nsp - the namespace to emit to
  * @param {String}  key - event type
  * @param {Object}  obj - event body
  */
 function doEmit(nsp, key, obj) {
   const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
-  const numClients = Object.values(nsp.connected).length;
-  if (key.startsWith('refocus.internal.realtime.sample')) {
-    tracker.trackEmit(obj.name, obj.updatedAt, numClients);
-  }
-  pubSubStats.trackEmit(key, obj);
-  if (!toggle.isFeatureEnabled('enableClientStats')) { // dont enter the else if its not a sample
-    nsp.emit(key, newObjectAsString);
-  } else if (key.startsWith('refocus.internal.realtime.sample')) {
-    Object.values(nsp.connected)
-      .forEach((socket) => {
-        socket.emit(key, newObjectAsString, (time) => {
-          // wrap this around to check the key and include for only samples
-          tracker.trackClient(obj.name, obj.updatedAt, time);
-          pubSubStats.trackClient(key, obj, time)
-        });
+  tracker.trackEmit(obj.name, obj.updatedAt);
+  nsp.emit(key, newObjectAsString);
+}
+
+/**
+ * Emit to the provided namespace, tracking stats.
+ * @param {Object}  nsp - the namespace to emit to
+ * @param {String}  key - event type
+ * @param {Object}  obj - event body
+ * @param {Array} rooms - list of rooms to emit to
+ */
+function doEmitWithTracking(nsp, key, obj, rooms) {
+  const newObjectAsString = getNewObjAsString(key, obj); // { key: {new: obj }}
+  const sockets = Object.values(nsp.connected)
+    .filter((socket) => rooms.includes(Object.keys(socket.rooms)[1]));
+  sockets
+    .forEach((socket) => {
+      socket.emit(key, newObjectAsString, (time) => {
+        // wrap this around to check the key and include for only samples
+        tracker.trackClient(obj.name, obj.updatedAt, time);
+        pubSubStats.trackClient(key, obj, time)
       });
-  }
+    });
+  tracker.trackEmit(obj.name, obj.updatedAt, sockets.length);
 }
 
 /**

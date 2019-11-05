@@ -287,8 +287,35 @@ describe('test/pubSubStats.js >', () => {
     const redisUrl = process.env.REDIS_URL || '//127.0.0.1:6379';
     const timestamp = Date.now();
 
+    const options = {
+      query: {
+        id: utils.getPerspectiveNamespaceString({ rootSubject: 'root' }),
+      },
+      transports: ['websocket'],
+    };
+
+    const optionsFiltered = {
+      query: {
+        id: utils.getPerspectiveNamespaceString({ rootSubject: 'root.sub5' }),
+      },
+      transports: ['websocket'],
+    };
+
+    function setUpSockets(opts) {
+      for (let i = 0; i < 3; i++) {
+        sockets.push(
+          sioClient(`http://localhost:3000/perspectives`, opts)
+          .on('connect', function () {
+            this.emit('auth', token);
+          })
+          .on('refocus.internal.realtime.sample.update', (data, cb) => cb && cb(Date.now()))
+          .on('refocus.internal.realtime.sample.add', (data, cb) => cb && cb(Date.now()))
+          .on('refocus.internal.realtime.sample.delete', (data, cb) => cb && cb(Date.now()))
+        );
+      }
+    }
+
     before(() => {
-      inspect = stdout.inspect();
       delete global[globalKey];
       conf.pubSubPerspectives = [redisUrl];
       conf.pubSubStatsLoggingInterval = 500;
@@ -299,10 +326,11 @@ describe('test/pubSubStats.js >', () => {
       conf.port = 3000;
       conf.dyno = 'd1';
       pubClient = redis.createClient(redisUrl);
-      start();
     });
 
-    before(() => {
+    beforeEach(() => {
+      start();
+      inspect = stdout.inspect();
       const jwtClaim = {
         tokenname: 'token1',
         username: 'user1',
@@ -315,92 +343,146 @@ describe('test/pubSubStats.js >', () => {
       .get('/v1/users/user1/tokens/token1')
       .matchHeader('Authorization', token)
       .reply(200);
+    });
 
-      const options = {
-        query: {
-          id: utils.getPerspectiveNamespaceString({ rootSubject: 'root' }),
-        },
-        transports: ['websocket'],
-      };
-
-      for (let i = 0; i < 3; i++) {
-        sockets.push(
-          sioClient(`http://localhost:3000/perspectives`, options)
-          .on('connect', function () {
-            this.emit('auth', token);
-          })
-          .on('refocus.internal.realtime.sample.update', (data, cb) => cb && cb(Date.now()))
-          .on('refocus.internal.realtime.sample.add', (data, cb) => cb && cb(Date.now()))
-          .on('refocus.internal.realtime.sample.delete', (data, cb) => cb && cb(Date.now()))
-        );
-      }
-
-      return Promise.all(sockets.map((socket) =>
-        new Promise((resolve) => socket.once('authenticated', resolve))
-      ));
+    afterEach(() => {
+      stop();
+      inspect.restore();
+      delete global[globalKey];
+      sockets.forEach((socket) => socket.close());
+      sockets = [];
     });
 
     after(() => {
-      delete global[globalKey];
-      inspect.restore();
       pubClient.quit();
-      sockets.forEach((socket) => socket.close());
       stop();
-    });
+    })
 
     const connRe = /info: activity=pubsub key=connections process=d1:0 connectCount=3 connectedSockets=3 \n/;
     const updRe = /info: activity=pubsub key=refocus.internal.realtime.sample.update process=d1:0 subCount=4 subTime=\d+ emitCount=4 emitTime=\d+ clientCount=12 clientTime=\d+ \n/;
     const addRe = /info: activity=pubsub key=refocus.internal.realtime.sample.add process=d1:0 subCount=2 subTime=\d+ emitCount=2 emitTime=\d+ clientCount=6 clientTime=\d+ \n/;
     const delRe = /info: activity=pubsub key=refocus.internal.realtime.sample.delete process=d1:0 subCount=1 subTime=\d+ emitCount=1 emitTime=\d+ clientCount=3 clientTime=\d+ \n/;
 
-    it('end-to-end', () => {
-      const upd = {
-        'refocus.internal.realtime.sample.update': {
-          name: 'testSample',
-          absolutePath: 'root',
-          status: 'OK',
-          updatedAt: Date.now() - 1000,
-          aspect: { name: 'asp1' },
-          subject: { tags: [] },
-        },
-      }
-      const add = {
-        'refocus.internal.realtime.sample.add': {
-          name: 'testSample',
-          absolutePath: 'root',
-          status: 'OK',
-          updatedAt: Date.now() - 1000,
-          aspect: { name: 'asp1' },
-          subject: { tags: [] },
-        },
-      }
-      const del = {
-        'refocus.internal.realtime.sample.delete': {
-          name: 'testSample',
-          absolutePath: 'root',
-          status: 'OK',
-          updatedAt: Date.now() - 1000,
-          aspect: { name: 'asp1' },
-          subject: { tags: [] },
-        },
-      }
+    const connReFiltered = /info: activity=pubsub key=connections process=d1:0 connectCount=6 connectedSockets=6 \n/;
+    const updReFiltered = /info: activity=pubsub key=refocus.internal.realtime.sample.update process=d1:0 subCount=1 subTime=\d+ emitCount=1 emitTime=\d+ clientCount=3 clientTime=\d+ \n/;
+    const addReFiltered = /info: activity=pubsub key=refocus.internal.realtime.sample.add process=d1:0 subCount=2 subTime=\d+ emitCount=2 emitTime=\d+ clientCount=6 clientTime=\d+ \n/;
+    const delReFiltered = /info: activity=pubsub key=refocus.internal.realtime.sample.delete process=d1:0 subCount=1 subTime=\d+ emitCount=1 emitTime=\d+ clientCount=6 clientTime=\d+ \n/;
 
-      pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
-      pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
-      pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
-      pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
-      pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
-      pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
-      pubClient.publish(conf.perspectiveChannel, JSON.stringify(del));
+    it('end-to-end without filtering', () => {
+      setUpSockets(options);
+      Promise.all(sockets.map((socket) =>
+      new Promise((resolve) => socket.once('authenticated', resolve))
+      )).then((done) => {
+        const upd = {
+          'refocus.internal.realtime.sample.update': {
+            name: 'testSample',
+            absolutePath: 'root',
+            status: 'OK',
+            updatedAt: Date.now() - 1000,
+            aspect: { name: 'asp1' },
+            subject: { tags: [] },
+          },
+        }
+        const add = {
+          'refocus.internal.realtime.sample.add': {
+            name: 'testSample',
+            absolutePath: 'root',
+            status: 'OK',
+            updatedAt: Date.now() - 1000,
+            aspect: { name: 'asp1' },
+            subject: { tags: [] },
+          },
+        }
+        const del = {
+          'refocus.internal.realtime.sample.delete': {
+            name: 'testSample',
+            absolutePath: 'root',
+            status: 'OK',
+            updatedAt: Date.now() - 1000,
+            aspect: { name: 'asp1' },
+            subject: { tags: [] },
+          },
+        }
 
-      return Promise.delay(conf.pubSubStatsLoggingInterval)
-      .then(() => {
-        expect(inspect.output).to.be.an('Array');
-        expect(inspect.output).to.have.lengthOf(4);
-        expect(inspect.output[0]).to.match(connRe);
-        expect(inspect.output[1]).to.match(updRe);
-        expect(inspect.output[2]).to.match(addRe);
-        expect(inspect.output[3]).to.match(delRe);
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(del));
+
+        Promise.delay(conf.pubSubStatsLoggingInterval)
+        .then(() => {
+          expect(inspect.output).to.be.an('Array');
+          expect(inspect.output).to.have.lengthOf(4);
+          expect(inspect.output[0]).to.match(connRe);
+          expect(inspect.output[1]).to.match(updRe);
+          expect(inspect.output[2]).to.match(addRe);
+          expect(inspect.output[3]).to.match(delRe);
+          done();
+        })
+        .catch((err) => {
+          done(err);
+        });
+      });
+    });
+
+    it('end-to-end with filtering', (done) => {
+      setUpSockets(optionsFiltered);
+      setUpSockets(options);
+      Promise.all(sockets.map((socket) =>
+      new Promise((resolve) => socket.once('authenticated', resolve))
+      )).then(() => {
+        const upd = {
+          'refocus.internal.realtime.sample.update': {
+            name: 'testSample',
+            absolutePath: 'root.sub1',
+            status: 'OK',
+            updatedAt: Date.now() - 1000,
+            aspect: { name: 'asp1' },
+            subject: { tags: [] },
+          },
+        }
+        const add = {
+          'refocus.internal.realtime.sample.add': {
+            name: 'testSample',
+            absolutePath: 'root.sub2',
+            status: 'OK',
+            updatedAt: Date.now() - 1000,
+            aspect: { name: 'asp1' },
+            subject: { tags: [] },
+          },
+        }
+        const del = {
+          'refocus.internal.realtime.sample.delete': {
+            name: 'testSample',
+            absolutePath: 'root.sub5',
+            status: 'OK',
+            updatedAt: Date.now() - 1000,
+            aspect: { name: 'asp1' },
+            subject: { tags: [] },
+          },
+        }
+
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(upd));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(add));
+        pubClient.publish(conf.perspectiveChannel, JSON.stringify(del));
+
+        Promise.delay(conf.pubSubStatsLoggingInterval)
+        .then(() => {
+          expect(inspect.output).to.be.an('Array');
+          expect(inspect.output).to.have.lengthOf(4);
+          expect(inspect.output[0]).to.match(connReFiltered);
+          expect(inspect.output[1]).to.match(updReFiltered);
+          expect(inspect.output[2]).to.match(addReFiltered);
+          expect(inspect.output[3]).to.match(delReFiltered);
+          done();
+        })
+        .catch((err) => {
+          done(err)
+        });
       });
     });
   });

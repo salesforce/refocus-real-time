@@ -21,7 +21,6 @@ const connectUtil = require('./util/connectUtil');
 const emitUtil = require('./util/emitUtil');
 const testUtil = require('./util/testUtil');
 const utils = require('../src/util/emitUtils');
-
 describe('test/socketIOEmitter.js >', () => {
   let token;
 
@@ -344,10 +343,51 @@ describe('test/socketIOEmitter.js >', () => {
       runFilterTests();
     });
 
+    describe('enableClientStats true', () => {
+      let sioServer;
+      let connectedClients;
+
+      before(() => {
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', true);
+        testUtil.toggleOverride('enableClientStats', true);
+        sioServer = require('socket.io')(3000);
+        utils.initializeNamespace('/bots', sioServer);
+        utils.initializeNamespace('/rooms', sioServer);
+        utils.initializeNamespace('/perspectives', sioServer);
+
+        return Promise.join(
+          connectUtil.connectPerspectivesNewFormat(sioServer, clientFilters, token),
+          connectUtil.connectBotsNewFormat(sioServer, botFilters, token),
+          connectUtil.connectRoomsNewFormat(sioServer, roomFilters, token),
+        )
+        .then(([perspectiveClients, botClients, roomClients]) => {
+          connectedClients = { ...perspectiveClients, ...botClients, ...roomClients };
+          emitUtil.setupTestFuncs({
+            sioServer,
+            perspectiveClients,
+            botClients,
+            roomClients,
+          });
+        });
+      });
+
+      after((done) => {
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', false);
+        testUtil.toggleOverride('enableClientStats', false);
+        connectUtil.closeClients(connectedClients);
+        sioServer.close(done);
+      });
+
+      runFilterTests();
+    });
+
     function runFilterTests() {
       const x = true; // event expected
       const _ = false; // event not expected
-
       describe('imc', () => {
         describe('botAction', () => {
           it('bot2, room3', function () {
@@ -386,7 +426,44 @@ describe('test/socketIOEmitter.js >', () => {
         });
 
         describe('botEvent', () => {
+
           it('bot1, room1', function () {
+            return emitUtil.testBotEventUpdate({
+              eventBody: emitUtil.textToBotEvent(this.test.title),
+              botExpectations: [
+                [x, 'bot1'],
+                [_, 'bot2'],
+                [_, 'bot3'],
+              ],
+              roomExpectations: [
+                [x, 'room1'],
+                [_, 'room2'],
+                [_, 'room3'],
+              ],
+            });
+          });
+
+          it('null, room1', function () {
+            const name = 'botEvent';
+            const roomId = '1';
+            const botId = null;
+            const event = { name, roomId, botId };
+            emitUtil.testBotEventUpdate({
+              eventBody: event,
+              botExpectations: [
+                [x, 'bot1'],
+                [x, 'bot2'],
+                [x, 'bot3'],
+              ],
+              roomExpectations: [
+                [x, 'room1'],
+                [_, 'room2'],
+                [_, 'room3'],
+              ],
+            });
+          });
+
+          it('null, room1, bot1', function () {
             return emitUtil.testBotEventUpdate({
               eventBody: emitUtil.textToBotEvent(this.test.title),
               botExpectations: [
