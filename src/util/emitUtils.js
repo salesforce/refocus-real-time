@@ -563,15 +563,20 @@ function emitToClients(io, nsp, rooms, key, obj) {
   pubSubStats.trackEmit(key, obj);
   if (key.startsWith('refocus.internal.realtime.sample') && toggle.isFeatureEnabled('enableClientStats')) {
     doEmitWithTracking(namespace, key, obj, rooms);
-  } else {
-    if (rooms && rooms.length) {
-      rooms.forEach((room) =>
-        namespace.to(room)
-      );
-      doEmit(namespace, key, obj);
+  } else if (rooms && rooms.length) {
+      if (nsp === '/bots') {
+        rooms.forEach((room) => {
+          const clients = io.nsps[nsp].adapter.rooms[room];
+          const client = clients && clients.sockets ? Object.keys(clients.sockets)[0] : null;
+          if (client) namespace.to(client);
+        });
+        doEmit(namespace, key, obj);
+      }  else {
+        rooms.forEach((room) => namespace.to(room));
+        doEmit(namespace, key, obj);
+      }
     }
   }
-}
 
 /**
  * Emit to the provided namespace.
