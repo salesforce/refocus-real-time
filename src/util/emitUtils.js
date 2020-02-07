@@ -549,6 +549,21 @@ function getNewObjAsString(key, obj) {
   return JSON.stringify(wrappedObj);
 }
 
+/**
+ * In the case of multiple connections to the same socket.io room
+ * (ie. multiple instances of the same bot) this function will emit
+ * data to only one.
+ * @param {Socket.io} io
+ * @param {string} nsp
+ * @param {string} room
+ */
+function emitToSingleInstance(io, nsp, room) {
+  const connectionsToRoom = io.nsps[nsp].adapter.rooms[room];
+  const connectionToEmitTo = connectionsToRoom && connectionsToRoom.sockets ?
+    Object.keys(connectionsToRoom.sockets)[0] : null;
+  if (connectionToEmitTo) namespace.to(connectionToEmitTo);
+}
+
 // NEW
 /**
  * Emit to all specified rooms.
@@ -563,15 +578,16 @@ function emitToClients(io, nsp, rooms, key, obj) {
   pubSubStats.trackEmit(key, obj);
   if (key.startsWith('refocus.internal.realtime.sample') && toggle.isFeatureEnabled('enableClientStats')) {
     doEmitWithTracking(namespace, key, obj, rooms);
-  } else {
-    if (rooms && rooms.length) {
-      rooms.forEach((room) =>
-        namespace.to(room)
-      );
-      doEmit(namespace, key, obj);
+  } else if (rooms && rooms.length) {
+      if (nsp === '/bots') {
+        rooms.forEach((room) => emitToSingleInstance(io, nsp, room));
+        doEmit(namespace, key, obj);
+      }  else {
+        rooms.forEach((room) => namespace.to(room));
+        doEmit(namespace, key, obj);
+      }
     }
   }
-}
 
 /**
  * Emit to the provided namespace.
