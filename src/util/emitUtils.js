@@ -553,12 +553,13 @@ function getNewObjAsString(key, obj) {
  * In the case of multiple connections to the same socket.io room
  * (ie. multiple instances of the same bot) this function will emit
  * data to only one.
- * @param {Socket.io} io
- * @param {string} nsp
- * @param {string} room
+ * @param {Socket.io} io - socket.io server
+ * @param {String} nsp - name of namespace
+ * @param {String} room - id of room within namespace
+ * @param {Socket.io} namespace - object representing namespace
  */
-function emitToSingleInstance(io, nsp, room) {
-  const connectionsToRoom = io.nsps[nsp].adapter.rooms[room];
+function emitToSingleInstance(io, namespace, namespaceId, room) {
+  const connectionsToRoom = io.nsps[namespaceId].adapter.rooms[room];
   const connectionToEmitTo = connectionsToRoom && connectionsToRoom.sockets ?
     Object.keys(connectionsToRoom.sockets)[0] : null;
   if (connectionToEmitTo) namespace.to(connectionToEmitTo);
@@ -580,7 +581,7 @@ function emitToClients(io, nsp, rooms, key, obj) {
     doEmitWithTracking(namespace, key, obj, rooms);
   } else if (rooms && rooms.length) {
       if (nsp === '/bots') {
-        rooms.forEach((room) => emitToSingleInstance(io, nsp, room));
+        rooms.forEach((room) => emitToSingleInstance(io, namespace, nsp, room));
         doEmit(namespace, key, obj);
       }  else {
         rooms.forEach((room) => namespace.to(room));
