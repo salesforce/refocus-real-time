@@ -554,9 +554,9 @@ function getNewObjAsString(key, obj) {
  * (ie. multiple instances of the same bot) this function will emit
  * data to only one.
  * @param {Socket.io} io - socket.io server
- * @param {String} nsp - name of namespace
- * @param {String} room - id of room within namespace
  * @param {Socket.io} namespace - object representing namespace
+ * @param {String} namespaceId - name of namespace
+ * @param {String} room - id of room within namespace
  */
 function emitToSingleInstance(io, namespace, namespaceId, room) {
   const connectionsToRoom = io.nsps[namespaceId].adapter.rooms[room];
