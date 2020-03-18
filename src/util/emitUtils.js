@@ -21,6 +21,7 @@ const jwtVerifyAsync = Promise.promisify(jwt.verify);
 const request = require('superagent');
 const pubSubStats = require('./pubSubStats');
 const tracker = require('./kafkaTracking');
+const namespaceModifiers = require('./namespaceModifiers.js');
 
 const filters = [
   'aspectFilter',
@@ -563,15 +564,16 @@ function emitToClients(io, nsp, rooms, key, obj) {
   pubSubStats.trackEmit(key, obj);
   if (key.startsWith('refocus.internal.realtime.sample') && toggle.isFeatureEnabled('enableClientStats')) {
     doEmitWithTracking(namespace, key, obj, rooms);
-  } else {
-    if (rooms && rooms.length) {
-      rooms.forEach((room) =>
-        namespace.to(room)
-      );
-      doEmit(namespace, key, obj);
+  } else if (rooms && rooms.length) {
+      if (nsp === '/bots') {
+        rooms.forEach((room) => namespaceModifiers.setNamespaceToEmitToSingleInstance(io, namespace, nsp, room));
+        doEmit(namespace, key, obj);
+      }  else {
+        rooms.forEach((room) => namespace.to(room));
+        doEmit(namespace, key, obj);
+      }
     }
   }
-}
 
 /**
  * Emit to the provided namespace.

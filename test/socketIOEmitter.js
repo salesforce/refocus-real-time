@@ -13,6 +13,9 @@
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
 chai.should();
+const { expect } =  chai;
+const sinon = require('sinon');
+const namespaceModifiers = require('../src/util/namespaceModifiers.js');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
 const nock = require('nock');
@@ -62,6 +65,21 @@ describe('test/socketIOEmitter.js >', () => {
     bot2: {
       name: 'bot2',
       id: 2,
+    },
+    bot3: {
+      name: 'bot3',
+      id: 3,
+    },
+  };
+
+  const botFiltersWithDuplicates = {
+    bot1: {
+      name: 'bot1',
+      id: 1,
+    },
+    bot2: {
+      name: 'bot1',
+      id: 1,
     },
     bot3: {
       name: 'bot3',
@@ -383,6 +401,72 @@ describe('test/socketIOEmitter.js >', () => {
       });
 
       runFilterTests();
+    });
+
+    describe('Testing emission to single bot only', () => {
+      let sioServer;
+      let connectedClients;
+      let setNamespaceToEmitToSingleInstanceSpy;
+      before(() => {
+        setNamespaceToEmitToSingleInstanceSpy = sinon.stub(namespaceModifiers, 'setNamespaceToEmitToSingleInstance');
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', true);
+        testUtil.toggleOverride('enableClientStats', true);
+        sioServer = require('socket.io')(3000);
+        utils.initializeNamespace('/bots', sioServer);
+        utils.initializeNamespace('/rooms', sioServer);
+        utils.initializeNamespace('/perspectives', sioServer);
+
+        return Promise.join(
+          connectUtil.connectPerspectivesNewFormat(sioServer, clientFilters, token),
+          connectUtil.connectBotsNewFormat(sioServer, botFiltersWithDuplicates, token),
+          connectUtil.connectRoomsNewFormat(sioServer, roomFilters, token),
+        )
+        .then(([perspectiveClients, botClients, roomClients]) => {
+          connectedClients = { ...perspectiveClients, ...botClients, ...roomClients };
+          emitUtil.setupTestFuncs({
+            sioServer,
+            perspectiveClients,
+            botClients,
+            roomClients,
+          });
+        });
+      });
+      after((done) => {
+        setNamespaceToEmitToSingleInstanceSpy.restore();
+        testUtil.toggleOverride('useOldNamespaceFormatPersp', false);
+        testUtil.toggleOverride('useOldNamespaceFormatImc', false);
+        testUtil.toggleOverride('useNewNamespaceFormat', false);
+        connectUtil.closeClients(connectedClients);
+        sioServer.close(done);
+      });
+
+      it('bot1, room1', function () {
+        const x = true; // event expected
+        const _ = false; // event not expected
+        const name = 'botAction';
+        const roomId = '1';
+        const botId = 'bot1';
+        const event = { name, roomId, botId };
+        emitUtil.testBotActionUpdate({
+          event,
+          eventBody: emitUtil.textToBotAction(this.test.title),
+          botExpectations: [
+            [x, 'bot1'],
+            [_, 'bot2'],
+            [_, 'bot3'],
+          ],
+          roomExpectations: [
+            [x, 'room1'],
+            [_, 'room2'],
+            [_, 'room3'],
+          ],
+        });
+        const numberOfConnectedBots = sioServer.nsps['/bots'].adapter.rooms[roomId].length;
+        expect(numberOfConnectedBots).to.equal(2);
+        expect(setNamespaceToEmitToSingleInstanceSpy.calledOnce).to.equal(true);
+      });
     });
 
     function runFilterTests() {
