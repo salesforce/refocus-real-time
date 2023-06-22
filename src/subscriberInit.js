@@ -33,8 +33,13 @@ module.exports = {
       client.subscribe(conf.perspectiveChannel);
       client.on('message', emitMessage);
     });
-
-    conf.pubSubBots.map((url) => redis.createClient(url))
+    
+    const redisConfig = {
+      tls: {
+        rejectUnauthorized: false
+      }
+    };
+    conf.pubSubBots.map((url) => redis.createClient(url, redisConfig))
       .forEach((client) => {
         clients.bots.push(client);
         client.subscribe(conf.botChannel);
