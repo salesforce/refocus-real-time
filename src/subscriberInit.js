@@ -19,6 +19,10 @@ const emitUtils = require('./util/emitUtils');
 const pubSubStats = require('./util/pubSubStats');
 const emitter = require('./emitter');
 
+const tlsOptions = {
+  rejectUnauthorized: false,
+};
+
 const clients = {
   bots: [],
   perspectives: [],
@@ -27,14 +31,14 @@ const clients = {
 module.exports = {
   init(io) {
     conf.pubSubPerspectives
-    .map((url) => redis.createClient(url))
+    .map((url) => redis.createClient({url: url, tls: tlsOptions}))
     .forEach((client) => {
       clients.perspectives.push(client);
       client.subscribe(conf.perspectiveChannel);
       client.on('message', emitMessage);
     });
 
-    conf.pubSubBots.map((url) => redis.createClient(url))
+    conf.pubSubBots.map((url) => redis.createClient({url: url, tls: tlsOptions}))
       .forEach((client) => {
         clients.bots.push(client);
         client.subscribe(conf.botChannel);
