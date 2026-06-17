@@ -30,7 +30,7 @@
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "istanbul": "^0.4.5",
-    "mocha": "^6.1.4",
+    "mocha": "^6.2.3",
     "nock": "^10.0.6",
     "sinon": "^7.3.2",
     "test-console": "^1.1.0"
